@@ -106,6 +106,17 @@ export default function HomePage() {
   const [feedbackCount, setFeedbackCount] = useState(0)
   const [activeTab, setActiveTab]   = useState<Tab>('feed')
   const [filter, setFilter]         = useState<Filter>('alles')
+  const [theme, setTheme]           = useState<'dark' | 'light'>('dark')
+
+  useEffect(() => {
+    const saved = localStorage.getItem('theme') as 'dark' | 'light' | null
+    if (saved) setTheme(saved)
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
 
   const CACHE_KEY = `articles_${new Date().toISOString().split('T')[0]}`
 
@@ -214,7 +225,26 @@ export default function HomePage() {
           <span className="font-display" style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.01em' }}>
             edwin&apos;s feed
           </span>
-          <span style={{ fontSize: '11px', color: 'var(--text3)' }}>{today}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text3)' }}>{today}</span>
+            <button
+              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+              title={theme === 'dark' ? 'Lichte modus' : 'Donkere modus'}
+              style={{
+                width: '28px', height: '16px', borderRadius: '8px', border: 'none',
+                background: theme === 'dark' ? 'var(--border2)' : 'var(--accent)',
+                cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: '2px',
+                left: theme === 'dark' ? '2px' : '14px',
+                width: '12px', height: '12px', borderRadius: '50%',
+                background: '#fff', transition: 'left 0.2s',
+                display: 'block',
+              }} />
+            </button>
+          </div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <button
               onClick={handleReset} disabled={resetting || fetching}
