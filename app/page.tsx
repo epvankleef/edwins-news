@@ -648,6 +648,9 @@ export default function HomePage() {
             <span>{todayStr}</span>
             <span>·</span>
             <span>{sourceCount} bronnen</span>
+            <span>·</span>
+            <a href="/opgeslagen" style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-dim)', textDecoration: 'none' }}>opgeslagen</a>
+            <a href="/voorkeuren" style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-dim)', textDecoration: 'none' }}>voorkeuren</a>
             <div className="theme-picker">
               {(['obsidian','graphite','porcelain','linen','bone'] as Theme[]).map(t => (
                 <button

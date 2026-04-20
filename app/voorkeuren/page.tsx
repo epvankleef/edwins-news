@@ -1,27 +1,24 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 
 type ProfileRow = { profile: string; updated_at: string }
 type FeedbackRow = { rating: number; news_items: { category: string | null; source: string | null } | null }
+type StatEntry = { name: string; interessant: number; mwah: number; nope: number; total: number }
 
-type StatEntry = { name: string; interessant: number; mwah: number; niet: number; total: number }
-
-function StatBar({ entries, label }: { entries: StatEntry[]; label: string }) {
-  if (entries.length === 0) return null
+function BarRow({ entry, max }: { entry: StatEntry; max: number }) {
+  const pct = max > 0 ? (entry.interessant / max) * 100 : 0
   return (
-    <div className="mb-6">
-      <p className="font-mono text-xs uppercase mb-3" style={{ color: 'var(--text3)', letterSpacing: '0.12em' }}>{label}</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {entries.map((e) => (
-          <div key={e.name} className="flex items-center gap-3 flex-wrap">
-            <span className="font-mono text-xs w-28 truncate shrink-0" style={{ color: 'var(--text2)' }}>{e.name}</span>
-            <span className="font-mono text-xs" style={{ color: 'var(--gold)' }}>{e.interessant}✓</span>
-            <span className="font-mono text-xs" style={{ color: 'var(--text3)' }}>{e.mwah}~</span>
-            <span className="font-mono text-xs" style={{ color: 'var(--down)' }}>{e.niet}✗</span>
-          </div>
-        ))}
+    <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 100px', gap: 14, alignItems: 'center', padding: '10px 0', borderTop: '1px solid var(--rule)' }}>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
+      <div style={{ position: 'relative', height: 4, borderRadius: 2, background: 'var(--rule-strong)', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: 'var(--sage)', borderRadius: 2, transition: 'width 600ms cubic-bezier(.22,1,.36,1)' }} />
+      </div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <span style={{ color: 'oklch(0.62 0.12 145)' }}>👍{entry.interessant}</span>
+        <span style={{ color: 'var(--ink-soft)' }}>🫤{entry.mwah}</span>
+        <span style={{ color: 'var(--rose)' }}>👎{entry.nope}</span>
       </div>
     </div>
   )
@@ -34,19 +31,20 @@ export default function VoorkeurenPage() {
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [updateMsg, setUpdateMsg] = useState<string | null>(null)
+  const [totalFeedback, setTotalFeedback] = useState(0)
 
   useEffect(() => {
     async function load() {
       const [profileRes, feedbackRes] = await Promise.all([
-        supabase.from('user_profile').select('profile, updated_at').eq('id', 1).single(),
-        supabase.from('user_feedback').select('rating, news_items(category, source)'),
+        getSupabase().from('user_profile').select('profile, updated_at').eq('id', 1).single(),
+        getSupabase().from('user_feedback').select('rating, news_items(category, source)'),
       ])
 
       if (profileRes.data) setProfile(profileRes.data as ProfileRow)
 
       const rows = (feedbackRes.data ?? []) as unknown as FeedbackRow[]
+      setTotalFeedback(rows.length)
 
-      // Aggregeer per categorie
       const catMap: Record<string, number[]> = {}
       const srcMap: Record<string, number[]> = {}
       for (const row of rows) {
@@ -64,13 +62,13 @@ export default function VoorkeurenPage() {
             name,
             interessant: ratings.filter(r => r === 3).length,
             mwah: ratings.filter(r => r === 2).length,
-            niet: ratings.filter(r => r === 1).length,
+            nope: ratings.filter(r => r === 1).length,
             total: ratings.length,
           }))
           .sort((a, b) => b.interessant - a.interessant || b.total - a.total)
 
       setCatStats(toStats(catMap))
-      setSrcStats(toStats(srcMap).slice(0, 10))
+      setSrcStats(toStats(srcMap).slice(0, 12))
       setLoading(false)
     }
     load()
@@ -82,117 +80,134 @@ export default function VoorkeurenPage() {
     try {
       const res = await fetch('/api/profile-update', { method: 'POST' })
       const json = await res.json()
-      if (json.skipped) {
-        setUpdateMsg(`Overgeslagen: ${json.reason}`)
-      } else if (json.triggered) {
-        setUpdateMsg('Profiel wordt bijgewerkt… even wachten en dan herladen.')
+      if (json.skipped) setUpdateMsg(`Overgeslagen: ${json.reason}`)
+      else if (json.triggered) {
+        setUpdateMsg('Profiel wordt bijgewerkt… even wachten.')
         setTimeout(() => window.location.reload(), 4000)
-      } else {
-        setUpdateMsg('Onbekende status')
-      }
+      } else setUpdateMsg('Onbekende status')
     } catch {
       setUpdateMsg('Netwerkfout')
-    } finally {
-      setUpdating(false)
     }
+    setUpdating(false)
   }
 
   const updatedDate = profile?.updated_at
     ? new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(profile.updated_at))
     : null
 
+  const maxCat = catStats[0]?.interessant ?? 1
+  const maxSrc = srcStats[0]?.interessant ?? 1
+
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
-      <div className="max-w-2xl mx-auto px-5 md:px-8 pb-20">
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--ink)' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 28px 80px', position: 'relative', zIndex: 1 }}>
+
         {/* Header */}
-        <header className="pt-8 pb-0">
-          <div style={{ borderTop: '4px solid var(--ink)' }} />
-          <div style={{ borderTop: '1px solid var(--ink)', marginTop: '3px' }} />
-          <div className="flex items-center justify-between py-1 px-0" style={{ borderBottom: '1px solid var(--border-dark)' }}>
-            <p className="font-mono" style={{ fontSize: '10px', color: 'var(--text3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              Voorkeuren
-            </p>
-            <a href="/" className="feedback-btn" style={{ textDecoration: 'none' }}>← feed</a>
+        <header style={{ borderBottom: '1px solid var(--rule)', paddingBottom: 18, marginBottom: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 10, fontFamily: 'var(--title)', fontSize: 32, letterSpacing: '-0.015em', lineHeight: 1.1 }}>
+              <span style={{ color: 'var(--accent)', fontSize: 20 }}>◆</span>
+              voorkeuren
+            </div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-soft)', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ color: 'var(--ink-dim)' }}>{totalFeedback} beoordelingen totaal</span>
+              <span>·</span>
+              <a href="/" style={{ color: 'var(--ink-dim)', textDecoration: 'none' }}>← feed</a>
+              <span>·</span>
+              <a href="/opgeslagen" style={{ color: 'var(--ink-dim)', textDecoration: 'none' }}>opgeslagen</a>
+            </div>
           </div>
-          <div className="py-5 text-center">
-            <h1 className="font-display" style={{ fontSize: 'clamp(2rem, 6vw, 3.5rem)', fontWeight: 700, letterSpacing: '-0.01em', lineHeight: 1, color: 'var(--ink)' }}>
-              Wat het systeem heeft geleerd
-            </h1>
-          </div>
-          <div style={{ borderTop: '1px solid var(--ink)', borderBottom: '3px double var(--ink)' }} className="py-1" />
         </header>
 
         {loading ? (
-          <div className="py-20 text-center">
-            <p className="font-mono text-xs tracking-widest" style={{ color: 'var(--text3)', animation: 'pulse-gold 1.5s ease infinite' }}>laden…</p>
-          </div>
+          <div style={{ padding: '60px 0', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-soft)', letterSpacing: '0.1em' }}>laden…</div>
         ) : (
-          <div className="mt-8" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
 
-            {/* Sectie A: Profiel */}
-            <section>
-              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                <h2 className="font-display text-xl" style={{ color: 'var(--ink)', fontWeight: 700 }}>Jouw profiel</h2>
-                <button
-                  className="feedback-btn"
-                  onClick={handleUpdate}
-                  disabled={updating}
-                  style={updating ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
-                >
-                  {updating ? '…bijwerken' : '↻ bijwerken'}
-                </button>
+            {/* Profiel */}
+            <section style={{ border: '1px solid var(--rule)', borderRadius: 16, background: 'var(--surface)', padding: '22px 24px', boxShadow: 'var(--inner-hi),var(--shadow)' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
+                <h2 style={{ margin: 0, fontFamily: 'var(--title)', fontSize: 22, letterSpacing: '-0.015em', color: 'var(--ink)' }}>Jouw profiel</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {updateMsg && (
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: updateMsg.startsWith('Over') ? 'var(--ink-soft)' : 'var(--sage)' }}>
+                      {updateMsg}
+                    </span>
+                  )}
+                  <button
+                    onClick={handleUpdate}
+                    disabled={updating}
+                    style={{
+                      padding: '5px 11px', borderRadius: 999,
+                      border: '1px solid var(--rule-strong)',
+                      background: 'transparent', color: 'var(--ink-dim)',
+                      fontFamily: 'var(--mono)', fontSize: 11, cursor: updating ? 'default' : 'pointer',
+                      opacity: updating ? 0.5 : 1,
+                    }}
+                  >
+                    {updating ? '…bijwerken' : '↻ bijwerken'}
+                  </button>
+                </div>
               </div>
 
               {profile?.profile ? (
-                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 2, padding: '16px 20px' }}>
-                  <p className="font-serif text-sm leading-relaxed" style={{ color: 'var(--text2)', whiteSpace: 'pre-wrap' }}>
+                <>
+                  <p style={{ fontFamily: 'var(--serif)', fontSize: 16, lineHeight: 1.6, color: 'var(--ink)', margin: '0 0 12px', whiteSpace: 'pre-wrap', maxWidth: '72ch' }}>
                     {profile.profile}
                   </p>
                   {updatedDate && (
-                    <p className="font-mono text-xs mt-3" style={{ color: 'var(--text3)' }}>
+                    <p style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-soft)', margin: 0 }}>
                       Bijgewerkt op {updatedDate}
                     </p>
                   )}
-                </div>
+                </>
               ) : (
-                <p className="font-serif text-sm italic" style={{ color: 'var(--text3)' }}>
-                  Nog geen profiel. Rate minimaal 10 artikelen en klik op bijwerken.
-                </p>
-              )}
-
-              {updateMsg && (
-                <p className="font-mono text-xs mt-2" style={{ color: updateMsg.startsWith('Overgeslagen') ? 'var(--text3)' : 'var(--gold)' }}>
-                  {updateMsg}
+                <p style={{ fontFamily: 'var(--serif)', fontSize: 15, fontStyle: 'italic', color: 'var(--ink-dim)', margin: 0 }}>
+                  Nog geen profiel. Beoordeel minimaal 10 artikelen en klik op bijwerken.
                 </p>
               )}
             </section>
 
-            {/* Sectie B: Statistieken */}
+            {/* Statistieken */}
             {(catStats.length > 0 || srcStats.length > 0) && (
-              <section>
-                <h2 className="font-display text-xl mb-4" style={{ color: 'var(--ink)', fontWeight: 700 }}>Jouw statistieken</h2>
-                <StatBar entries={catStats} label="Per categorie" />
-                <StatBar entries={srcStats} label="Per bron (top 10)" />
+              <section style={{ border: '1px solid var(--rule)', borderRadius: 16, background: 'var(--surface)', padding: '22px 24px', boxShadow: 'var(--inner-hi),var(--shadow)' }}>
+                <h2 style={{ margin: '0 0 20px', fontFamily: 'var(--title)', fontSize: 22, letterSpacing: '-0.015em', color: 'var(--ink)' }}>Statistieken</h2>
+
+                {catStats.length > 0 && (
+                  <div style={{ marginBottom: 28 }}>
+                    <p style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-soft)', margin: '0 0 4px' }}>Per categorie</p>
+                    {catStats.map(e => <BarRow key={e.name} entry={e} max={maxCat} />)}
+                  </div>
+                )}
+
+                {srcStats.length > 0 && (
+                  <div>
+                    <p style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-soft)', margin: '0 0 4px' }}>Per bron (top 12)</p>
+                    {srcStats.map(e => <BarRow key={e.name} entry={e} max={maxSrc} />)}
+                  </div>
+                )}
               </section>
             )}
 
-            {/* Sectie C: Uitleg */}
-            <section style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
-              <h2 className="font-display text-xl mb-3" style={{ color: 'var(--ink)', fontWeight: 700 }}>Hoe het werkt</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* Uitleg */}
+            <section style={{ border: '1px solid var(--rule)', borderRadius: 16, background: 'var(--surface)', padding: '22px 24px', boxShadow: 'var(--inner-hi),var(--shadow)' }}>
+              <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--title)', fontSize: 22, letterSpacing: '-0.015em', color: 'var(--ink)' }}>Hoe het werkt</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
-                  'Bij het ophalen van nieuws worden artikelen gescoord op basis van jouw profiel.',
-                  'Hogere score (8-10) = bovenaan in de feed.',
-                  'Het profiel wordt automatisch bijgewerkt na elke 10 nieuwe beoordelingen.',
-                  'Sterren 4-5 = interessant → verschijnen op de Interessant-pagina.',
-                  'Sterren 1-2 = minder relevant → worden minder snel getoond.',
-                ].map((line, i) => (
-                  <p key={i} className="font-mono text-xs" style={{ color: 'var(--text3)' }}>
-                    <span style={{ color: 'var(--gold)', marginRight: '8px' }}>·</span>{line}
-                  </p>
+                  ['↺', 'Elke ochtend worden nieuwe artikelen opgehaald uit 18+ bronnen en gescoord op jouw profiel.'],
+                  ['◆', 'Score 1–10 op relevantie — hogere scores verschijnen bovenaan in de feed.'],
+                  ['👍 🫤 👎', 'Jouw reacties trainen het profiel. Na 10+ nieuwe reacties kan het bijgewerkt worden.'],
+                  ['📊', 'De statistieken hiernaast laten zien welke bronnen en categorieën je het meest waardeert.'],
+                  ['⌛', 'Beoordelingen en artikelen worden automatisch verwijderd na 60 dagen.'],
+                ].map(([icon, text]) => (
+                  <div key={icon} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--accent)', minWidth: 40 }}>{icon}</span>
+                    <p style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-dim)', margin: 0, lineHeight: 1.5 }}>{text}</p>
+                  </div>
                 ))}
               </div>
             </section>
+
           </div>
         )}
       </div>
