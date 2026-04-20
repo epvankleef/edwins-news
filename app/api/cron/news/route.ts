@@ -162,7 +162,7 @@ async function scoreBatch(
 Verwerk elk artikel:
 1. Score 1-10 op relevantie voor dit profiel
 2. Vertaal de titel naar het Nederlands
-3. Schrijf een Nederlandse samenvatting (1 zin, max 120 tekens)
+3. Schrijf een Nederlandse samenvatting van 2 à 3 zinnen (max 300 tekens)
 
 Geef terug als JSON object: {"articles":[{"index":1,"score":7,"title":"Nederlandse titel","summary":"Nederlandse samenvatting"},...]}
 
