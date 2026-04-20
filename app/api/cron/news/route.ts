@@ -18,22 +18,22 @@ function decodeHTML(str: string): string {
     .trim()
 }
 
-const RSS_SOURCES = [
-  // AI-labs (eigen blogs)
-  { url: 'https://openai.com/news/rss.xml', source: 'OpenAI', category: 'ai' },
-  { url: 'https://www.anthropic.com/rss.xml', source: 'Anthropic', category: 'ai' },
-  { url: 'https://blog.google/technology/ai/rss/', source: 'Google AI', category: 'ai' },
-  { url: 'https://blogs.microsoft.com/ai/feed/', source: 'Microsoft AI', category: 'ai' },
-  { url: 'https://huggingface.co/blog/feed.xml', source: 'Hugging Face', category: 'ai' },
-  { url: 'https://mistral.ai/news/rss.xml', source: 'Mistral', category: 'ai' },
+const RSS_SOURCES: { url: string; source: string; category: string; maxItems?: number; cutoffHours?: number }[] = [
+  // AI-labs (eigen blogs) — posten niet dagelijks, ruimere cutoff
+  { url: 'https://openai.com/news/rss.xml', source: 'OpenAI', category: 'ai', cutoffHours: 72 },
+  { url: 'https://www.anthropic.com/rss.xml', source: 'Anthropic', category: 'ai', cutoffHours: 72 },
+  { url: 'https://blog.google/technology/ai/rss/', source: 'Google AI', category: 'ai', cutoffHours: 72 },
+  { url: 'https://blogs.microsoft.com/ai/feed/', source: 'Microsoft AI', category: 'ai', cutoffHours: 72 },
+  { url: 'https://huggingface.co/blog/feed.xml', source: 'Hugging Face', category: 'ai', cutoffHours: 72 },
+  { url: 'https://mistral.ai/news/rss.xml', source: 'Mistral', category: 'ai', cutoffHours: 72 },
   // AI-media
   { url: 'https://venturebeat.com/category/ai/feed/', source: 'VentureBeat AI', category: 'ai' },
   { url: 'https://www.thedecoder.de/feed/', source: 'The Decoder', category: 'ai' },
   { url: 'https://techcrunch.com/category/artificial-intelligence/feed/', source: 'TechCrunch AI', category: 'ai' },
   { url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', source: 'The Verge AI', category: 'ai' },
-  // Academisch
-  { url: 'https://export.arxiv.org/rss/cs.AI', source: 'ArXiv AI', category: 'research' },
-  { url: 'https://export.arxiv.org/rss/cs.LG', source: 'ArXiv ML', category: 'research' },
+  // Academisch — max 4 per feed zodat ze niet alles verdringen
+  { url: 'https://export.arxiv.org/rss/cs.AI', source: 'ArXiv AI', category: 'research', maxItems: 4 },
+  { url: 'https://export.arxiv.org/rss/cs.LG', source: 'ArXiv ML', category: 'research', maxItems: 4 },
   // Google News AI (Nederlandstalig)
   { url: 'https://news.google.com/rss/search?q=artificial+intelligence&hl=nl&gl=NL&ceid=NL:nl', source: 'Google News AI', category: 'ai' },
   { url: 'https://news.google.com/rss/search?q=ChatGPT+OR+Claude+OR+Gemini&hl=nl&gl=NL&ceid=NL:nl', source: 'Google News LLM', category: 'ai' },
@@ -54,7 +54,7 @@ type Article = {
   score?: number
 }
 
-async function fetchRSS(url: string, source: string, category: string): Promise<Article[]> {
+async function fetchRSS(url: string, source: string, category: string, maxItems = 20, cutoffHours = 24): Promise<Article[]> {
   try {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 5000)
@@ -63,9 +63,9 @@ async function fetchRSS(url: string, source: string, category: string): Promise<
     if (!res.ok) return []
     const xml = await res.text()
     const items = xml.match(/<item[\s\S]*?<\/item>/g) ?? xml.match(/<entry[\s\S]*?<\/entry>/g) ?? []
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000
+    const cutoff = Date.now() - cutoffHours * 60 * 60 * 1000
 
-    return items.slice(0, 20).flatMap((item) => {
+    return items.slice(0, maxItems).flatMap((item) => {
       const title = decodeHTML((item.match(/<title[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/title>/) ?? item.match(/<title[^>]*>([\s\S]*?)<\/title>/))?.[1] ?? '')
       const link = (item.match(/<link[^>]*href="([^"]+)"/) ?? item.match(/<link[^>]*>(https?:\/\/[^<]+)<\/link>/))?.[1]?.trim()
       const pubDate = (item.match(/<pubDate>([\s\S]*?)<\/pubDate>/) ?? item.match(/<published>([\s\S]*?)<\/published>/) ?? item.match(/<updated>([\s\S]*?)<\/updated>/))?.[1]?.trim()
@@ -162,11 +162,18 @@ ${list}`
     max_tokens: 4000,
   })
 
-  const content = response.choices[0]?.message?.content ?? '[]'
+  const raw = response.choices[0]?.message?.content ?? '[]'
+  // Strip markdown code fences if present
+  const content = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
   try {
     const parsed = JSON.parse(content)
     return Array.isArray(parsed) ? parsed : (parsed.scores ?? parsed.articles ?? parsed.items ?? [])
   } catch {
+    // Try extracting JSON array from response
+    const match = content.match(/\[[\s\S]*\]/)
+    if (match) {
+      try { return JSON.parse(match[0]) } catch { /* geef op */ }
+    }
     return []
   }
 }
@@ -221,8 +228,8 @@ export async function GET(req: NextRequest) {
         // Fetch all sources in parallel, emit each result as it completes
         const allArticles: Article[] = []
 
-        const rssPromises = RSS_SOURCES.map(({ url, source, category }) =>
-          fetchRSS(url, source, category).then((articles) => {
+        const rssPromises = RSS_SOURCES.map(({ url, source, category, maxItems, cutoffHours }) =>
+          fetchRSS(url, source, category, maxItems, cutoffHours).then((articles) => {
             send({ type: 'source', name: source, count: articles.length })
             allArticles.push(...articles)
           })
