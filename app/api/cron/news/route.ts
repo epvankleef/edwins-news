@@ -37,6 +37,11 @@ const RSS_SOURCES = [
   // Google News AI (Nederlandstalig)
   { url: 'https://news.google.com/rss/search?q=artificial+intelligence&hl=nl&gl=NL&ceid=NL:nl', source: 'Google News AI', category: 'ai' },
   { url: 'https://news.google.com/rss/search?q=ChatGPT+OR+Claude+OR+Gemini&hl=nl&gl=NL&ceid=NL:nl', source: 'Google News LLM', category: 'ai' },
+  // Nederlandse bronnen
+  { url: 'https://tweakers.net/feeds/nieuws.xml', source: 'Tweakers', category: 'tech' },
+  { url: 'https://www.nu.nl/rss/tech', source: 'NU.nl Tech', category: 'tech' },
+  { url: 'https://www.emerce.nl/rss', source: 'Emerce', category: 'tech' },
+  { url: 'https://news.google.com/rss/search?q=kunstmatige+intelligentie&hl=nl&gl=NL&ceid=NL:nl', source: 'Google News NL KI', category: 'ai' },
 ]
 
 type Article = {
