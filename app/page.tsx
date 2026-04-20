@@ -1,241 +1,136 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase, type NewsItem, type FeedbackRating } from '@/lib/supabase'
 
-const CAT_CLASS: Record<string, string> = {
-  ai:       'cat-ai',
-  research: 'cat-research',
-  tech:     'cat-tech',
-  business: 'cat-business',
+const PILL: Record<string, string> = {
+  ai: 'pill pill-ai', research: 'pill pill-research',
+  tech: 'pill pill-tech', business: 'pill pill-business',
+}
+const pill = (cat: string) => PILL[(cat ?? '').toLowerCase()] ?? 'pill pill-default'
+
+const SCORE_COLOR = (s: number) =>
+  s >= 8 ? 'var(--green)' : s >= 6 ? 'var(--accent2)' : 'var(--text3)'
+
+type Tab = 'feed' | 'opgeslagen' | 'voorkeuren'
+type Filter = 'alles' | 'ai' | 'research' | 'tech'
+
+function timeStr(iso: string) {
+  return new Intl.DateTimeFormat('nl-NL', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 }
 
-function ScorePill({ score }: { score: number }) {
-  const color = score >= 8 ? 'var(--green)' : score >= 6 ? 'var(--accent2)' : 'var(--text3)'
-  return (
-    <span style={{
-      fontSize: '11px',
-      fontWeight: 600,
-      color,
-      background: 'transparent',
-      fontFamily: 'var(--font-body)',
-      letterSpacing: '0.02em',
-    }}>
-      {score.toFixed(0)}
-    </span>
-  )
-}
-
-const RATINGS: { value: FeedbackRating; label: string; activeColor: string }[] = [
-  { value: 3, label: 'Interessant', activeColor: 'var(--green)' },
-  { value: 2, label: 'Mwah',        activeColor: 'var(--text2)' },
-  { value: 1, label: 'Niet voor mij', activeColor: 'var(--red)' },
-]
-
-function ArticleCard({
-  item, index, feedbackMap, onFeedback,
+// ── Article Row ──────────────────────────────────────────────────────────────
+function ArticleRow({
+  item, index, rating, onFeedback,
 }: {
   item: NewsItem
   index: number
-  feedbackMap: Record<string, FeedbackRating>
+  rating: FeedbackRating | undefined
   onFeedback: (id: string, r: FeedbackRating) => void
 }) {
-  const [saved, setSaved] = useState(false)
-  const current = feedbackMap[item.id]
-  const catKey = (item.category ?? 'default').toLowerCase()
-  const catClass = CAT_CLASS[catKey] ?? 'cat-default'
-  const timeAgo = item.published_at
-    ? new Intl.DateTimeFormat('nl-NL', { hour: '2-digit', minute: '2-digit' }).format(new Date(item.published_at))
-    : null
-
-  const handleRate = (r: FeedbackRating) => {
-    onFeedback(item.id, r)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 1600)
-  }
+  const [open, setOpen] = useState(false)
 
   return (
-    <article
-      className="fade-up"
-      style={{
-        animationDelay: `${index * 50}ms`,
-        borderBottom: '1px solid var(--border)',
-        padding: '20px 0',
-      }}
-    >
-      {/* Meta row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className={catClass} style={{
-            fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em',
-            textTransform: 'uppercase', padding: '2px 8px', borderRadius: '4px',
-          }}>
-            {item.category ?? 'algemeen'}
+    <>
+      <div
+        className="article-row slide-in"
+        style={{ animationDelay: `${index * 30}ms` }}
+        onClick={() => setOpen(o => !o)}
+      >
+        {/* Score */}
+        <div style={{ paddingTop: '1px', textAlign: 'right' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: item.score != null ? SCORE_COLOR(item.score) : 'var(--text3)', fontVariantNumeric: 'tabular-nums' }}>
+            {item.score != null ? item.score.toFixed(0) : '—'}
           </span>
-          {item.source && (
-            <span style={{ fontSize: '12px', color: 'var(--text3)', fontWeight: 400 }}>
-              {item.source}
-            </span>
-          )}
-          {timeAgo && (
-            <span style={{ fontSize: '12px', color: 'var(--text3)' }}>{timeAgo}</span>
+        </div>
+
+        {/* Main */}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
+            <span className={pill(item.category ?? '')}>{item.category ?? 'algemeen'}</span>
+            <span style={{ fontSize: '11px', color: 'var(--text3)', fontWeight: 400 }}>{item.source}</span>
+            {item.published_at && (
+              <span style={{ fontSize: '11px', color: 'var(--text3)' }}>{timeStr(item.published_at)}</span>
+            )}
+          </div>
+          <p className="font-display" style={{
+            fontSize: '13.5px', fontWeight: 600, color: 'var(--text)',
+            lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis',
+            display: '-webkit-box', WebkitLineClamp: open ? 'unset' : 2,
+            WebkitBoxOrient: 'vertical',
+          }}>
+            {item.url ? (
+              <a href={item.url} target="_blank" rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                style={{ color: 'inherit', textDecoration: 'none' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent2)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'inherit')}
+              >{item.title}</a>
+            ) : item.title}
+          </p>
+          {open && item.summary && (
+            <p style={{ fontSize: '12.5px', color: 'var(--text2)', lineHeight: 1.6, marginTop: '6px', fontWeight: 300 }}>
+              {item.summary}
+            </p>
           )}
         </div>
-        {item.score != null && <ScorePill score={item.score} />}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', paddingTop: '2px', flexShrink: 0 }}>
+          <button
+            className={`action-btn${rating === 3 ? ' active-interessant' : ''}`}
+            onClick={e => { e.stopPropagation(); onFeedback(item.id, 3) }}
+          >interessant</button>
+          <button
+            className={`action-btn${rating === 2 ? ' active-mwah' : ''}`}
+            onClick={e => { e.stopPropagation(); onFeedback(item.id, 2) }}
+          >mwah</button>
+          <button
+            className={`action-btn${rating === 1 ? ' active-niet' : ''}`}
+            onClick={e => { e.stopPropagation(); onFeedback(item.id, 1) }}
+          >niet</button>
+        </div>
       </div>
-
-      {/* Title */}
-      {item.url ? (
-        <a
-          href={item.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-display"
-          style={{
-            display: 'block',
-            fontSize: '1.05rem',
-            fontWeight: 700,
-            lineHeight: 1.35,
-            color: 'var(--text)',
-            textDecoration: 'none',
-            marginBottom: '8px',
-            transition: 'color 0.15s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent2)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text)')}
-        >
-          {item.title}
-        </a>
-      ) : (
-        <h2 className="font-display" style={{
-          fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.35,
-          color: 'var(--text)', marginBottom: '8px',
-        }}>
-          {item.title}
-        </h2>
-      )}
-
-      {/* Summary */}
-      {item.summary && (
-        <p style={{
-          fontSize: '13.5px', color: 'var(--text2)', lineHeight: 1.65,
-          marginBottom: '14px', fontWeight: 300,
-        }}>
-          {item.summary}
-        </p>
-      )}
-
-      {/* Feedback */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
-        {RATINGS.map(({ value, label, activeColor }) => {
-          const active = current === value
-          return (
-            <button
-              key={value}
-              onClick={() => handleRate(value)}
-              style={{
-                fontSize: '11px',
-                fontWeight: 500,
-                padding: '4px 10px',
-                borderRadius: '6px',
-                border: `1px solid ${active ? activeColor : 'var(--border2)'}`,
-                background: active ? `${activeColor}18` : 'transparent',
-                color: active ? activeColor : 'var(--text3)',
-                cursor: 'pointer',
-                transition: 'all 0.12s ease',
-                fontFamily: 'var(--font-body)',
-                letterSpacing: '0.01em',
-              }}
-              onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text2)' }}}
-              onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.color = 'var(--text3)' }}}
-            >
-              {label}
-            </button>
-          )
-        })}
-        {saved && (
-          <span style={{
-            fontSize: '11px', color: 'var(--green)', marginLeft: '4px',
-            animation: 'saved-flash 1.6s ease forwards',
-            pointerEvents: 'none', position: 'absolute', right: 0,
-          }}>
-            opgeslagen
-          </span>
-        )}
-      </div>
-    </article>
+    </>
   )
 }
 
-function NavBtn({
-  onClick, disabled, children, variant = 'default',
-}: {
-  onClick?: () => void
-  disabled?: boolean
-  children: React.ReactNode
-  variant?: 'default' | 'ghost'
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        fontSize: '12px',
-        fontWeight: 500,
-        padding: '6px 14px',
-        borderRadius: '8px',
-        border: variant === 'ghost' ? '1px solid var(--border2)' : '1px solid var(--accent)',
-        background: variant === 'ghost' ? 'transparent' : 'var(--accent)',
-        color: variant === 'ghost' ? 'var(--text2)' : '#fff',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.45 : 1,
-        transition: 'all 0.15s ease',
-        fontFamily: 'var(--font-body)',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {children}
-    </button>
-  )
-}
-
+// ── Main ─────────────────────────────────────────────────────────────────────
 export default function HomePage() {
-  const [articles, setArticles]       = useState<NewsItem[]>([])
-  const [loading, setLoading]         = useState(true)
-  const [fetching, setFetching]       = useState(false)
-  const [resetting, setResetting]     = useState(false)
-  const [fetchLines, setFetchLines]   = useState<string[]>([])
+  const [articles, setArticles]     = useState<NewsItem[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [fetching, setFetching]     = useState(false)
+  const [resetting, setResetting]   = useState(false)
+  const [fetchStatus, setFetchStatus] = useState('')
   const [feedbackMap, setFeedbackMap] = useState<Record<string, FeedbackRating>>({})
   const [feedbackCount, setFeedbackCount] = useState(0)
+  const [activeTab, setActiveTab]   = useState<Tab>('feed')
+  const [filter, setFilter]         = useState<Filter>('alles')
 
   const CACHE_KEY = `articles_${new Date().toISOString().split('T')[0]}`
 
   const loadArticles = useCallback(async () => {
     const today = new Date().toISOString().split('T')[0]
     const { data } = await supabase
-      .from('news_items')
-      .select('*')
+      .from('news_items').select('*')
       .gte('created_at', today + 'T00:00:00')
-      .order('score', { ascending: false })
-      .limit(10)
+      .order('score', { ascending: false }).limit(10)
     const items = data ?? []
     setArticles(items)
-    if (items.length > 0) {
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify(items)) } catch { /* quota */ }
-    }
+    if (items.length > 0) try { localStorage.setItem(CACHE_KEY, JSON.stringify(items)) } catch { /**/ }
   }, [CACHE_KEY])
 
   useEffect(() => {
     async function init() {
       try {
-        const cached = localStorage.getItem(CACHE_KEY)
-        if (cached) setArticles(JSON.parse(cached) as NewsItem[])
+        const c = localStorage.getItem(CACHE_KEY)
+        if (c) setArticles(JSON.parse(c) as NewsItem[])
         else await loadArticles()
       } catch { await loadArticles() }
       const { data } = await supabase.from('user_feedback').select('news_item_id, rating')
       if (data) {
         const map: Record<string, FeedbackRating> = {}
-        for (const row of data) map[row.news_item_id] = row.rating as FeedbackRating
+        for (const r of data) map[r.news_item_id] = r.rating as FeedbackRating
         setFeedbackMap(map)
         setFeedbackCount(data.length)
       }
@@ -244,175 +139,168 @@ export default function HomePage() {
     init()
   }, [loadArticles, CACHE_KEY])
 
-  const unrated = articles.filter(a => !feedbackMap[a.id])
+  const visible = useMemo(() =>
+    filter === 'alles' ? articles : articles.filter(a => (a.category ?? '').toLowerCase() === filter),
+    [articles, filter]
+  )
+  const unrated = visible.filter(a => !feedbackMap[a.id])
 
   const handleFetch = useCallback(async () => {
-    setFetching(true)
-    setFetchLines([])
+    setFetching(true); setFetchStatus('ophalen…')
     try {
       const res = await fetch('/api/cron/news', {
         headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET ?? 'change-me-before-deploying'}` },
       })
       if (!res.body) throw new Error('Geen stream')
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buf = ''
+      const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = ''
       while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buf += decoder.decode(value, { stream: true })
-        const parts = buf.split('\n\n')
-        buf = parts.pop() ?? ''
+        const { done, value } = await reader.read(); if (done) break
+        buf += dec.decode(value, { stream: true })
+        const parts = buf.split('\n\n'); buf = parts.pop() ?? ''
         for (const part of parts) {
-          const line = part.replace(/^data: /, '').trim()
-          if (!line) continue
+          const line = part.replace(/^data: /, '').trim(); if (!line) continue
           try {
-            const evt = JSON.parse(line)
-            if (evt.type === 'source')
-              setFetchLines(p => [...p, `${evt.count > 0 ? '✓' : '·'} ${evt.name}${evt.count > 0 ? ` — ${evt.count}` : ''}`])
-            else if (evt.type === 'status')
-              setFetchLines(p => [...p, evt.message])
-            else if (evt.type === 'done') {
-              setFetchLines(p => [...p, `${evt.inserted} artikelen opgehaald`])
-              await loadArticles()
-            } else if (evt.type === 'error')
-              setFetchLines(p => [...p, `Fout: ${evt.message}`])
-          } catch { /* skip */ }
+            const e = JSON.parse(line)
+            if (e.type === 'status') setFetchStatus(e.message)
+            else if (e.type === 'done') { setFetchStatus(`${e.inserted} artikelen opgehaald`); await loadArticles() }
+            else if (e.type === 'error') setFetchStatus('Fout: ' + e.message)
+          } catch { /**/ }
         }
       }
-    } catch (e) {
-      setFetchLines(['Netwerkfout: ' + String(e)])
-    } finally {
-      setFetching(false)
-    }
+    } catch (e) { setFetchStatus('Fout: ' + String(e)) }
+    finally { setFetching(false) }
   }, [loadArticles])
 
   const handleReset = useCallback(async () => {
     if (!confirm('Alle artikelen van vandaag wissen?')) return
     setResetting(true)
-    setFetchLines([])
     try {
       const res = await fetch('/api/cron/reset-today', {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET ?? 'change-me-before-deploying'}` },
       })
-      const json = await res.json()
-      if (res.ok) {
-        setFetchLines([`${json.deleted} artikelen gewist`])
-        setArticles([])
-        try { localStorage.removeItem(CACHE_KEY) } catch { /* quota */ }
-      } else {
-        setFetchLines([`Fout: ${json.error}`])
-      }
-    } catch (e) {
-      setFetchLines(['Netwerkfout: ' + String(e)])
-    } finally {
-      setResetting(false)
-    }
+      const j = await res.json()
+      setFetchStatus(res.ok ? `${j.deleted} artikelen gewist` : 'Fout: ' + j.error)
+      if (res.ok) { setArticles([]); try { localStorage.removeItem(CACHE_KEY) } catch { /**/ } }
+    } catch (e) { setFetchStatus('Fout: ' + String(e)) }
+    finally { setResetting(false) }
   }, [CACHE_KEY])
 
   const handleFeedback = useCallback(async (newsItemId: string, rating: FeedbackRating) => {
-    setFeedbackMap(prev => ({ ...prev, [newsItemId]: rating }))
-    const newCount = feedbackCount + 1
-    setFeedbackCount(newCount)
+    setFeedbackMap(p => ({ ...p, [newsItemId]: rating }))
+    const n = feedbackCount + 1; setFeedbackCount(n)
     await fetch('/api/feedback', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ news_item_id: newsItemId, rating }),
     })
-    if (newCount % 10 === 0) fetch('/api/profile-update', { method: 'POST' }).catch(() => null)
+    if (n % 10 === 0) fetch('/api/profile-update', { method: 'POST' }).catch(() => null)
   }, [feedbackCount])
 
-  const today = new Intl.DateTimeFormat('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
+  const today = new Intl.DateTimeFormat('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())
+  const cats = useMemo(() => {
+    const c = new Set(articles.map(a => (a.category ?? '').toLowerCase()).filter(Boolean))
+    return ['alles', ...Array.from(c)] as (Filter | string)[]
+  }, [articles])
+
+  const ratedCount   = articles.filter(a => feedbackMap[a.id]).length
+  const unratedCount = articles.filter(a => !feedbackMap[a.id]).length
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 20px 80px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
 
-        {/* Header */}
-        <header style={{ padding: '24px 0 0', marginBottom: '8px' }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            paddingBottom: '16px', borderBottom: '1px solid var(--border)',
-          }}>
-            <div>
-              <h1 className="font-display" style={{
-                fontSize: '1.25rem', fontWeight: 800, color: 'var(--text)',
-                letterSpacing: '-0.02em', lineHeight: 1,
-              }}>
-                Edwin&apos;s Feed
-              </h1>
-              <p style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '3px', fontWeight: 400 }}>
-                {today}
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <NavBtn onClick={handleReset} disabled={resetting || fetching} variant="ghost">
-                {resetting ? 'wissen…' : 'wis'}
-              </NavBtn>
-              <NavBtn onClick={handleFetch} disabled={fetching || resetting}>
-                {fetching ? <span style={{ animation: 'pulse-accent 1s ease infinite', display: 'inline-block' }}>ophalen…</span> : '↻ ophalen'}
-              </NavBtn>
-              <a href="/opgeslagen" style={{
-                fontSize: '12px', fontWeight: 500, padding: '6px 14px',
-                borderRadius: '8px', border: '1px solid var(--border2)',
-                color: 'var(--text2)', textDecoration: 'none',
-                transition: 'all 0.15s ease', whiteSpace: 'nowrap',
-              }}>
-                opgeslagen
-              </a>
-            </div>
+      {/* Top bar */}
+      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 20px' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '44px' }}>
+          <span className="font-display" style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.01em' }}>
+            edwin&apos;s feed
+          </span>
+          <span style={{ fontSize: '11px', color: 'var(--text3)' }}>{today}</span>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <button
+              onClick={handleReset} disabled={resetting || fetching}
+              className="action-btn"
+              style={{ opacity: (resetting || fetching) ? 0.4 : 1 }}
+            >{resetting ? 'wissen…' : 'wis'}</button>
+            <button
+              onClick={handleFetch} disabled={fetching || resetting}
+              style={{
+                padding: '5px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+                background: 'var(--accent)', border: 'none', color: '#fff',
+                cursor: (fetching || resetting) ? 'not-allowed' : 'pointer',
+                opacity: (fetching || resetting) ? 0.5 : 1,
+                fontFamily: 'var(--font-body)', transition: 'opacity 0.15s',
+              }}
+            >{fetching ? <span style={{ animation: 'pulse-dim 1s ease infinite', display: 'inline-block' }}>ophalen…</span> : '↻ ophalen'}</button>
           </div>
-        </header>
+        </div>
+      </div>
 
-        {/* Fetch log */}
-        {fetchLines.length > 0 && (
-          <div className="fade-up" style={{
-            margin: '16px 0', padding: '14px 16px',
-            background: 'var(--surface)', border: '1px solid var(--border)',
-            borderRadius: '10px',
-          }}>
-            {fetchLines.map((line, i) => (
-              <p key={i} style={{
-                fontSize: '12px', lineHeight: 1.7, fontFamily: 'var(--font-body)',
-                color: line.includes('Fout') ? 'var(--red)' : line.startsWith('✓') ? 'var(--green)' : 'var(--text3)',
-              }}>
-                {line}
-              </p>
+      {/* Tabs */}
+      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 20px' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', gap: '0', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex' }}>
+            {(['feed', 'opgeslagen', 'voorkeuren'] as Tab[]).map(t => (
+              t === 'feed'
+                ? <button key={t} className={`tab ${activeTab === t ? 'active' : ''}`} onClick={() => setActiveTab(t)}>Feed</button>
+                : <a key={t} href={`/${t}`} className="tab" style={{ textDecoration: 'none' }}>
+                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </a>
             ))}
-            {fetching && <p style={{ fontSize: '12px', color: 'var(--text3)', animation: 'pulse-accent 1s ease infinite' }}>…</p>}
           </div>
-        )}
+          {fetchStatus && (
+            <span style={{ fontSize: '11px', color: fetching ? 'var(--accent2)' : 'var(--text3)', animation: fetching ? 'pulse-dim 1s ease infinite' : 'none' }}>
+              {fetchStatus}
+            </span>
+          )}
+          <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: 'var(--text3)' }}>
+            <span><b style={{ color: 'var(--text2)' }}>{articles.length}</b> artikelen</span>
+            <span><b style={{ color: 'var(--green)' }}>{ratedCount}</b> beoordeeld</span>
+            <span><b style={{ color: 'var(--text2)' }}>{unratedCount}</b> open</span>
+          </div>
+        </div>
+      </div>
 
-        {/* Articles */}
+      {/* Filter bar */}
+      {articles.length > 0 && (
+        <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '8px 20px' }}>
+          <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {cats.map(c => (
+              <button
+                key={c}
+                className={`filter-chip ${filter === c ? 'active' : ''}`}
+                onClick={() => setFilter(c as Filter)}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Content */}
+      <div style={{ flex: 1, maxWidth: '900px', margin: '0 auto', width: '100%' }}>
         {loading ? (
-          <div style={{ padding: '80px 0', textAlign: 'center' }}>
-            <p style={{ fontSize: '13px', color: 'var(--text3)', animation: 'pulse-accent 1.5s ease infinite' }}>laden…</p>
+          <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text3)', animation: 'pulse-dim 1.4s ease infinite' }}>laden…</p>
           </div>
         ) : unrated.length === 0 && articles.length === 0 ? (
-          <div style={{ padding: '80px 0', textAlign: 'center' }}>
-            <p className="font-display" style={{ fontSize: '1.1rem', color: 'var(--text2)', marginBottom: '8px' }}>
-              Nog geen artikelen vandaag.
-            </p>
-            <p style={{ fontSize: '13px', color: 'var(--text3)' }}>Klik op ↻ ophalen om te beginnen.</p>
+          <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+            <p className="font-display" style={{ fontSize: '1rem', color: 'var(--text2)', marginBottom: '8px' }}>Nog geen artikelen vandaag.</p>
+            <p style={{ fontSize: '12px', color: 'var(--text3)' }}>Klik op ↻ ophalen om te beginnen.</p>
           </div>
         ) : unrated.length === 0 ? (
-          <div style={{ padding: '80px 0', textAlign: 'center' }}>
-            <p className="font-display" style={{ fontSize: '1.1rem', color: 'var(--text2)', marginBottom: '10px' }}>
-              Alles gelezen voor vandaag.
-            </p>
-            <a href="/opgeslagen" style={{ fontSize: '13px', color: 'var(--accent2)', textDecoration: 'underline' }}>
+          <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+            <p className="font-display" style={{ fontSize: '1rem', color: 'var(--text2)', marginBottom: '10px' }}>Alles beoordeeld voor vandaag.</p>
+            <a href="/opgeslagen" style={{ fontSize: '12px', color: 'var(--accent2)', textDecoration: 'underline' }}>
               Bekijk opgeslagen artikelen →
             </a>
           </div>
         ) : (
           <div>
             {unrated.map((item, i) => (
-              <ArticleCard
-                key={item.id}
-                item={item}
-                index={i}
-                feedbackMap={feedbackMap}
+              <ArticleRow
+                key={item.id} item={item} index={i}
+                rating={feedbackMap[item.id]}
                 onFeedback={handleFeedback}
               />
             ))}
