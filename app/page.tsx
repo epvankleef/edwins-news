@@ -158,10 +158,14 @@ function Header({
   total,
   onFetch,
   fetching,
+  onReset,
+  resetting,
 }: {
   total: number
   onFetch: () => void
   fetching: boolean
+  onReset: () => void
+  resetting: boolean
 }) {
   const today = new Intl.DateTimeFormat('nl-NL', {
     weekday: 'long',
@@ -182,9 +186,17 @@ function Header({
         <div className="flex items-center gap-3">
           <button
             className="feedback-btn"
+            onClick={onReset}
+            disabled={resetting || fetching}
+            style={(resetting || fetching) ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+          >
+            {resetting ? <span style={{ animation: 'pulse-gold 1s ease infinite' }}>wissen…</span> : '× wis vandaag'}
+          </button>
+          <button
+            className="feedback-btn"
             onClick={onFetch}
-            disabled={fetching}
-            style={fetching ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+            disabled={fetching || resetting}
+            style={(fetching || resetting) ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
           >
             {fetching ? <span style={{ animation: 'pulse-gold 1s ease infinite' }}>ophalen…</span> : '↻ ophalen'}
           </button>
@@ -218,6 +230,7 @@ export default function HomePage() {
   const [articles, setArticles] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [fetching, setFetching] = useState(false)
+  const [resetting, setResetting] = useState(false)
   const [fetchLines, setFetchLines] = useState<string[]>([])
   const [feedbackMap, setFeedbackMap] = useState<Record<string, FeedbackRating>>({})
   const [feedbackCount, setFeedbackCount] = useState(0)
@@ -310,6 +323,30 @@ export default function HomePage() {
     }
   }, [loadArticles])
 
+  const handleReset = useCallback(async () => {
+    if (!confirm('Alle artikelen van vandaag wissen?')) return
+    setResetting(true)
+    setFetchLines([])
+    try {
+      const res = await fetch('/api/cron/reset-today', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET ?? 'change-me-before-deploying'}` },
+      })
+      const json = await res.json()
+      if (res.ok) {
+        setFetchLines([`× ${json.deleted} artikelen gewist`])
+        setArticles([])
+        try { localStorage.removeItem(CACHE_KEY) } catch { /* quota */ }
+      } else {
+        setFetchLines([`✗ ${json.error}`])
+      }
+    } catch (e) {
+      setFetchLines(['✗ Netwerkfout: ' + String(e)])
+    } finally {
+      setResetting(false)
+    }
+  }, [CACHE_KEY])
+
   const handleFeedback = useCallback(
     async (newsItemId: string, rating: FeedbackRating) => {
       setFeedbackMap((prev) => ({ ...prev, [newsItemId]: rating }))
@@ -332,7 +369,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
       <div className="max-w-2xl mx-auto px-5 md:px-8 pb-20">
-        <Header total={unrated.length} onFetch={handleFetch} fetching={fetching} />
+        <Header total={unrated.length} onFetch={handleFetch} fetching={fetching} onReset={handleReset} resetting={resetting} />
 
         {fetchLines.length > 0 && (
           <div className="mb-6 p-4 fade-up" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 2 }}>
