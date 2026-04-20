@@ -244,7 +244,7 @@ export default function HomePage() {
       .select('*')
       .gte('created_at', today + 'T00:00:00')
       .order('score', { ascending: false })
-      .limit(20)
+      .limit(10)
     const items = data ?? []
     setArticles(items)
     if (items.length > 0) {
