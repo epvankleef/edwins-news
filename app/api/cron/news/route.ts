@@ -69,7 +69,14 @@ async function fetchRSS(url: string, source: string, category: string, maxItems 
       const title = decodeHTML((item.match(/<title[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/title>/) ?? item.match(/<title[^>]*>([\s\S]*?)<\/title>/))?.[1] ?? '')
       const link = (item.match(/<link[^>]*href="([^"]+)"/) ?? item.match(/<link[^>]*>(https?:\/\/[^<]+)<\/link>/))?.[1]?.trim()
       const pubDate = (item.match(/<pubDate>([\s\S]*?)<\/pubDate>/) ?? item.match(/<published>([\s\S]*?)<\/published>/) ?? item.match(/<updated>([\s\S]*?)<\/updated>/))?.[1]?.trim()
-      const desc = decodeHTML((item.match(/<description[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/description>/) ?? item.match(/<description[^>]*>([\s\S]*?)<\/description>/) ?? item.match(/<summary[^>]*>([\s\S]*?)<\/summary>/))?.[1]?.replace(/<[^>]+>/g, '') ?? '').slice(0, 300)
+      const rawDesc = (item.match(/<description[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/description>/) ?? item.match(/<description[^>]*>([\s\S]*?)<\/description>/) ?? item.match(/<summary[^>]*>([\s\S]*?)<\/summary>/))?.[1] ?? ''
+      const desc = decodeHTML(rawDesc
+        .replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, '') // verwijder volledige <a> tags inclusief inhoud
+        .replace(/<[^>]+>/g, ' ')                  // strip overige HTML tags
+        .replace(/https?:\/\/\S+/g, '')            // verwijder losse URLs
+        .replace(/\s{2,}/g, ' ')                   // comprimeer whitespace
+        .trim()
+      ).slice(0, 300)
 
       if (!title || !link) return []
       const pub = pubDate ? new Date(pubDate).getTime() : Date.now()
