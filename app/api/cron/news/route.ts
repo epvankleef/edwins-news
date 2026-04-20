@@ -140,40 +140,40 @@ async function scoreBatch(
   offset: number
 ): Promise<{ index: number; score: number; title: string; summary: string }[]> {
   const list = articles.map((a, i) => `${offset + i + 1}. ${a.title}${a.summary ? ` | ${a.summary.slice(0, 80)}` : ''}`).join('\n')
-  const prompt = `Gebruikersprofiel: "${profile.slice(0, 300)}"
-
-Verwerk elk artikel hieronder:
-1. Geef een relevantiescore 1-10 op basis van het profiel
-2. Vertaal de titel naar het Nederlands (VERPLICHT, ook als het al Nederlands is)
-3. Schrijf een Nederlandse samenvatting van 1 zin (max 120 tekens)
-
-Antwoord ALLEEN als geldige JSON array zonder extra tekst:
-[{"index":${offset + 1},"score":7,"title":"Nederlandse titel","summary":"Nederlandse samenvatting"},...]
-
-Zorg dat ALLE ${articles.length} artikelen in de array staan.
-
-Artikelen:
-${list}`
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4.1-mini',
-    messages: [{ role: 'user', content: prompt }],
+    messages: [
+      {
+        role: 'system',
+        content: 'Je bent een nieuwsredacteur. Je antwoordt ALTIJD in het Nederlands. Je antwoordt ALLEEN met geldige JSON, nooit met tekst erbuiten.',
+      },
+      {
+        role: 'user',
+        content: `Gebruikersprofiel: "${profile.slice(0, 300)}"
+
+Verwerk elk artikel:
+1. Score 1-10 op relevantie voor dit profiel
+2. Vertaal de titel naar het Nederlands
+3. Schrijf een Nederlandse samenvatting (1 zin, max 120 tekens)
+
+Geef terug als JSON object: {"articles":[{"index":1,"score":7,"title":"Nederlandse titel","summary":"Nederlandse samenvatting"},...]}
+
+Artikelen:
+${list}`,
+      },
+    ],
     temperature: 0,
     max_tokens: 4000,
+    response_format: { type: 'json_object' },
   })
 
-  const raw = response.choices[0]?.message?.content ?? '[]'
-  // Strip markdown code fences if present
-  const content = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
+  const raw = response.choices[0]?.message?.content ?? '{}'
   try {
-    const parsed = JSON.parse(content)
-    return Array.isArray(parsed) ? parsed : (parsed.scores ?? parsed.articles ?? parsed.items ?? [])
+    const parsed = JSON.parse(raw)
+    const arr = parsed.articles ?? parsed.scores ?? parsed.items ?? parsed
+    return Array.isArray(arr) ? arr : []
   } catch {
-    // Try extracting JSON array from response
-    const match = content.match(/\[[\s\S]*\]/)
-    if (match) {
-      try { return JSON.parse(match[0]) } catch { /* geef op */ }
-    }
     return []
   }
 }
