@@ -514,11 +514,11 @@ export default function HomePage() {
   // Fetch articles from Supabase
   const loadArticles = useCallback(async () => {
     setLoading(true)
-    const today = new Date().toISOString().split('T')[0]
+    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
     const { data } = await getSupabase()
       .from('news_items')
       .select('*')
-      .gte('created_at', today + 'T00:00:00')
+      .gte('created_at', cutoff)
       .order('score', { ascending: false })
       .limit(30)
     setItems((data ?? []).map(toFeedItem))
