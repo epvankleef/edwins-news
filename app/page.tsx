@@ -696,9 +696,11 @@ export default function HomePage() {
           </div>
 
           {/* Midden: navigatie */}
-          <nav className="masthead__nav">
+          <nav className="masthead__nav desktop-nav">
+            <a href="/" className="masthead__nav-link masthead__nav-link--active">feed</a>
             <a href="/opgeslagen" className="masthead__nav-link">opgeslagen</a>
             <a href="/voorkeuren" className="masthead__nav-link">voorkeuren</a>
+            <a href="/bronnen" className="masthead__nav-link">bronnen</a>
           </nav>
 
           {/* Rechts: controls */}
