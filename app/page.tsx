@@ -576,26 +576,41 @@ export default function HomePage() {
         .select('news_item_id, rating'),
     ])
 
-    // Deduplicate by URL — keep highest-scoring item per URL
-    const seen = new Map<string, ReturnType<typeof toFeedItem>>()
+    // Bouw reactie-map op uit Supabase + localStorage
+    const REVERSE: Record<number, ReactKey> = { 3: 'interessant', 2: 'mwah', 1: 'nope' }
+    const stored = (() => { try { return JSON.parse(localStorage.getItem('ef:reactions') ?? '{}') } catch { return {} } })()
+    const allReactions: Record<string, ReactKey> = { ...stored }
+    for (const fb of (fbData ?? [])) {
+      const key = REVERSE[fb.rating as number]
+      if (key) allReactions[String(fb.news_item_id)] = key
+    }
+
+    // Dedupliceer op URL — groepeer per URL, kies hoogste score
+    // Draag bestaande reactie over naar de winnaar (zelfde artikel, andere bron/ID)
+    const groups = new Map<string, ReturnType<typeof toFeedItem>[]>()
     for (const raw of (newsData ?? [])) {
       const item = toFeedItem(raw)
       const key = item.url === '#' ? item.id : item.url
-      const existing = seen.get(key)
-      if (!existing || item.score > existing.score) seen.set(key, item)
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key)!.push(item)
     }
-    setItems([...seen.values()])
 
-    // Sync reactions from Supabase into localStorage
-    const REVERSE: Record<number, ReactKey> = { 3: 'interessant', 2: 'mwah', 1: 'nope' }
-    const stored = (() => { try { return JSON.parse(localStorage.getItem('ef:reactions') ?? '{}') } catch { return {} } })()
-    const merged: Record<string, ReactKey> = { ...stored }
-    for (const fb of (fbData ?? [])) {
-      const key = REVERSE[fb.rating as number]
-      if (key) merged[String(fb.news_item_id)] = key
+    const mergedReactions: Record<string, ReactKey> = { ...allReactions }
+    const deduped: ReturnType<typeof toFeedItem>[] = []
+    for (const group of groups.values()) {
+      group.sort((a, b) => b.score - a.score)
+      const winner = group[0]
+      // Als een ander exemplaar van dit artikel al beoordeeld is, koppel dat aan de winnaar
+      const ratedSibling = group.find(it => allReactions[it.id])
+      if (ratedSibling && !mergedReactions[winner.id]) {
+        mergedReactions[winner.id] = allReactions[ratedSibling.id]
+      }
+      deduped.push(winner)
     }
-    localStorage.setItem('ef:reactions', JSON.stringify(merged))
-    setReactions(merged)
+
+    setItems(deduped)
+    localStorage.setItem('ef:reactions', JSON.stringify(mergedReactions))
+    setReactions(mergedReactions)
 
     setLoading(false)
   }, [])
