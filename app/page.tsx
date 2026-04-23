@@ -535,7 +535,7 @@ export default function HomePage() {
   const [theme, setTheme] = useState<Theme>('porcelain')
   const [layout, setLayout] = useState<Layout>('list')
   const [font, setFont] = useState<FontKey>('instrument')
-  const [filterMode, setFilterMode] = useState<FilterMode>('all')
+  const [filterMode, setFilterMode] = useState<FilterMode>('unread')
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
@@ -543,16 +543,14 @@ export default function HomePage() {
 
   const searchRef = useRef<HTMLInputElement>(null)
 
-  // Load persisted prefs
+  // Load persisted prefs (reactions komen via loadArticles vanuit Supabase)
   useEffect(() => {
     const t = localStorage.getItem('ef:theme') as Theme | null
     const l = localStorage.getItem('ef:layout') as Layout | null
     const f = localStorage.getItem('ef:font') as FontKey | null
-    const r = localStorage.getItem('ef:reactions')
     if (t) setTheme(t)
     if (l) setLayout(l)
     if (f) setFont(f)
-    if (r) { try { setReactions(JSON.parse(r)) } catch {} }
   }, [])
 
   // Apply theme + font to body
@@ -565,13 +563,40 @@ export default function HomePage() {
   const loadArticles = useCallback(async () => {
     setLoading(true)
     const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-    const { data } = await getSupabase()
-      .from('news_items')
-      .select('*')
-      .gte('created_at', cutoff)
-      .order('score', { ascending: false })
-      .limit(10)
-    setItems((data ?? []).map(toFeedItem))
+
+    const [{ data: newsData }, { data: fbData }] = await Promise.all([
+      getSupabase()
+        .from('news_items')
+        .select('*')
+        .gte('created_at', cutoff)
+        .order('score', { ascending: false })
+        .limit(60),
+      getSupabase()
+        .from('user_feedback')
+        .select('news_item_id, rating'),
+    ])
+
+    // Deduplicate by URL — keep highest-scoring item per URL
+    const seen = new Map<string, ReturnType<typeof toFeedItem>>()
+    for (const raw of (newsData ?? [])) {
+      const item = toFeedItem(raw)
+      const key = item.url === '#' ? item.id : item.url
+      const existing = seen.get(key)
+      if (!existing || item.score > existing.score) seen.set(key, item)
+    }
+    setItems([...seen.values()])
+
+    // Sync reactions from Supabase into localStorage
+    const REVERSE: Record<number, ReactKey> = { 3: 'interessant', 2: 'mwah', 1: 'nope' }
+    const stored = (() => { try { return JSON.parse(localStorage.getItem('ef:reactions') ?? '{}') } catch { return {} } })()
+    const merged: Record<string, ReactKey> = { ...stored }
+    for (const fb of (fbData ?? [])) {
+      const key = REVERSE[fb.rating as number]
+      if (key) merged[String(fb.news_item_id)] = key
+    }
+    localStorage.setItem('ef:reactions', JSON.stringify(merged))
+    setReactions(merged)
+
     setLoading(false)
   }, [])
 
