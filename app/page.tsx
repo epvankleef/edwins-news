@@ -147,6 +147,25 @@ function RxBtns({
   )
 }
 
+type SortKey = 'score' | 'source' | 'time' | 'title' | 'reaction'
+type SortDir = 'asc' | 'desc'
+
+function sortItems(items: FeedItem[], key: SortKey, dir: SortDir, reactions: Record<string, ReactKey>): FeedItem[] {
+  const mul = dir === 'asc' ? 1 : -1
+  return [...items].sort((a, b) => {
+    let cmp = 0
+    if (key === 'score') cmp = a.score - b.score
+    else if (key === 'source') cmp = a.source.localeCompare(b.source)
+    else if (key === 'time') cmp = a.time.localeCompare(b.time)
+    else if (key === 'title') cmp = a.title.localeCompare(b.title)
+    else if (key === 'reaction') {
+      const order: Record<string, number> = { interessant: 2, mwah: 1, nope: 0 }
+      cmp = (order[reactions[a.id] ?? ''] ?? -1) - (order[reactions[b.id] ?? ''] ?? -1)
+    }
+    return cmp * mul
+  })
+}
+
 // ── Layout 1: List ───────────────────────────────────────────────────────────
 function ListLayout({
   items,
@@ -163,8 +182,16 @@ function ListLayout({
   onRowClick: (idx: number, id: string) => void
   onReact: (id: string, key: ReactKey) => void
 }) {
-  const today = new Date()
-  const dateStr = today.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const [sortKey, setSortKey] = useState<SortKey>('score')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc')
+    else { setSortKey(key); setSortDir('desc') }
+  }
+
+  const sorted = sortItems(items, sortKey, sortDir, reactions)
+  const arrow = (key: SortKey) => sortKey === key ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''
 
   return (
     <div className="atelier">
@@ -174,12 +201,30 @@ function ListLayout({
         <span>·</span><span>↵ open</span>
         <span>·</span><span>1 2 3 reageer</span>
       </div>
+      <div className="atelier__colheads">
+        <span style={{ width: 28 }} />
+        <button className="colhead" style={{ width: 68 }} onClick={() => handleSort('score')}>
+          Score{arrow('score')}
+        </button>
+        <button className="colhead" style={{ width: 190 }} onClick={() => handleSort('source')}>
+          Bron{arrow('source')}
+        </button>
+        <button className="colhead" style={{ width: 120 }} onClick={() => handleSort('time')}>
+          Tijd{arrow('time')}
+        </button>
+        <button className="colhead" style={{ flex: 1 }} onClick={() => handleSort('title')}>
+          Titel{arrow('title')}
+        </button>
+        <button className="colhead" style={{ width: 180, textAlign: 'right' }} onClick={() => handleSort('reaction')}>
+          Reactie{arrow('reaction')}
+        </button>
+      </div>
       <div className="atelier__rows">
-        {items.map((it, idx) => {
+        {sorted.map((it, idx) => {
           const isC = idx === cursor
           const isE = expanded[it.id]
           const rx = reactions[it.id]
-          const arrow = isC ? '▸' : (it.hot ? '◆' : '·')
+          const arrowMark = isC ? '▸' : (it.hot ? '◆' : '·')
           const rxDisplay = rx
             ? <span style={{ color: 'var(--sage)', fontWeight: 600 }}>
                 {REACTIONS.find(r => r.key === rx)?.emoji}{' '}
@@ -197,19 +242,19 @@ function ListLayout({
                 className="arow__main"
                 onClick={() => onRowClick(idx, it.id)}
               >
-                <span className="arow__arrow" style={{ width: 28 }}>{arrow}</span>
-                <span className="score-pill" style={{ width: 60, color: scoreColor(it.score) }}>
+                <span className="arow__arrow" style={{ width: 28 }}>{arrowMark}</span>
+                <span className="score-pill" style={{ width: 68, color: scoreColor(it.score) }}>
                   {it.score}<span className="slash">/10</span>
                 </span>
-                <span style={{ width: 160, display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--ink-dim)', fontFamily: 'var(--mono)', fontSize: 11 }}>
+                <span style={{ width: 190, display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--ink-dim)', fontFamily: 'var(--mono)', fontSize: 12 }}>
                   <SrcDot source={it.source} />{it.source}
                 </span>
-                <span style={{ width: 96, color: 'var(--ink-soft)', fontFamily: 'var(--mono)', fontSize: 11 }}>{it.time}</span>
+                <span style={{ width: 120, color: 'var(--ink-soft)', fontFamily: 'var(--mono)', fontSize: 12 }}>{it.time}</span>
                 <span className="arow__title" style={{ flex: 1 }}>
                   {it.title}
                   {it.hot && <HotFlag />}
                 </span>
-                <span style={{ width: 160, textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 11 }}>{rxDisplay}</span>
+                <span style={{ width: 180, textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 12 }}>{rxDisplay}</span>
               </div>
               {isE && (
                 <div className="arow__expand">
@@ -218,7 +263,7 @@ function ListLayout({
                   <div className="arow__actions">
                     <RxBtns item={it} myReaction={rx} onReact={onReact} />
                     <a href={it.url} target="_blank" rel="noreferrer"
-                      style={{ marginLeft: 8, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', textDecoration: 'none' }}
+                      style={{ marginLeft: 8, fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)', textDecoration: 'none' }}
                       onClick={e => e.stopPropagation()}>
                       ↗ open
                     </a>

@@ -115,7 +115,7 @@ kbd{display:inline-block;padding:1px 5px;border:1px solid var(--rule-strong);bor
 .layoutrow__label{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-soft);margin-right:4px}
 .lchip{padding:4px 10px;border-radius:6px;border:1px solid transparent;background:transparent;color:var(--ink-dim);font-family:var(--mono);font-size:11px;letter-spacing:0.02em;font-weight:500;transition:all 140ms ease}
 .lchip:hover{color:var(--ink);background:var(--surface)}
-.lchip--on{color:var(--ink);background:var(--surface);border-color:var(--rule-strong);box-shadow:inset 0 -2px 0 var(--accent)}
+.lchip--on{color:var(--ink);background:color-mix(in oklab,var(--accent) 8%,var(--surface));border-color:var(--accent)}
 
 /* font switcher chips */
 .fchip{display:inline-flex;align-items:baseline;gap:8px;padding:5px 11px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--ink-dim);transition:all 140ms ease}
@@ -148,6 +148,9 @@ kbd{display:inline-block;padding:1px 5px;border:1px solid var(--rule-strong);bor
 .atelier__cursor{color:var(--accent);animation:blink 1.1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 .atelier__header-row{display:flex;align-items:center;gap:14px;padding:12px 22px 10px;font-size:9px;letter-spacing:0.14em;color:var(--ink-soft);text-transform:uppercase;font-weight:600}
+.atelier__colheads{display:flex;align-items:center;gap:14px;padding:0 22px;border-bottom:1px solid var(--rule);background:color-mix(in oklab,var(--surface) 80%,transparent)}
+.colhead{display:inline-flex;align-items:center;padding:9px 0;font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;background:none;border:none;cursor:pointer;transition:color 140ms;white-space:nowrap;user-select:none}
+.colhead:hover{color:var(--ink)}
 
 .arow{padding:0 22px;border-top:1px solid var(--rule);cursor:pointer;transition:background 140ms ease;position:relative}
 .arow:hover{background:var(--surface)}
