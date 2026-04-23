@@ -281,6 +281,13 @@ kbd{display:inline-block;padding:1px 5px;border:1px solid var(--rule-strong);bor
 .nav-drawer__section-label{font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-soft);margin-top:28px;margin-bottom:10px;padding-left:12px}
 .nav-drawer__themes{display:flex;gap:8px;padding-left:12px}
 
+/* Fetch inline pulse (next to ophalen button) */
+@keyframes rpulse{0%,100%{opacity:0.2;transform:scale(0.75) rotate(0deg)}50%{opacity:1;transform:scale(1.1) rotate(180deg)}}
+.fetch-pulse{display:inline-flex;align-items:center;gap:7px}
+.fetch-pulse__mark{color:var(--accent);font-size:13px;animation:rpulse 1.4s ease-in-out infinite;display:inline-block;line-height:1}
+.fetch-pulse__txt{font-family:var(--mono);font-size:10px;color:var(--ink-dim);letter-spacing:0.04em;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fetch-inline{display:inline-block;color:var(--accent);animation:rpulse 1.4s ease-in-out infinite;line-height:1}
+
 /* Diamond loader */
 @keyframes ldpulse{0%,100%{opacity:0.15;transform:scale(0.65)}50%{opacity:1;transform:scale(1.15)}}
 .loader{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:80px 0}

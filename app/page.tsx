@@ -675,11 +675,16 @@ export default function HomePage() {
               disabled={fetching}
               style={{ opacity: fetching ? 0.6 : 1 }}
             >
-              {fetching ? '…' : '↺ ophalen'}
+              {fetching ? <span className="fetch-inline">◆</span> : '↺ ophalen'}
             </button>
-            {fetchMsg && (
+            {fetching ? (
+              <span className="fetch-pulse">
+                <span className="fetch-pulse__mark">◆</span>
+                <span className="fetch-pulse__txt">{fetchMsg || 'ophalen…'}</span>
+              </span>
+            ) : fetchMsg ? (
               <span className="masthead__msg">{fetchMsg}</span>
-            )}
+            ) : null}
             <NavMenu current="/" />
           </div>
         </div>
@@ -702,7 +707,7 @@ export default function HomePage() {
               disabled={fetching}
               style={{ opacity: fetching ? 0.6 : 1, flexShrink: 0 }}
             >
-              {fetching ? '…' : '↺ ophalen'}
+              {fetching ? <span className="fetch-inline">◆</span> : '↺ ophalen'}
             </button>
             <div className="filterrow__search">
               <span className="filterrow__srch-icon">⌕</span>
