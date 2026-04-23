@@ -62,6 +62,10 @@ n8n (automatisering) ──→ Supabase (PostgreSQL) ←── Next.js / React (
 - Na het plaatsen van feedback: controleer of er 20+ nieuwe beoordelingen zijn → activeer eventueel de profielupdate-webhook
 - Geen server-side rendering vereist; de Supabase REST API wordt rechtstreeks vanuit de client aangeroepen
 
+## Verificatieregel
+
+Gebruik altijd de `superpowers:verification-before-completion` skill voordat je een taak als voltooid markeert. Voer tests, builds en/of linter uit en toon de daadwerkelijke output — claimen dat iets werkt zonder bewijs is niet toegestaan.
+
 ## Ontwerpkeuzes
 - **Geen wachttijd**: nieuws is al opgehaald en gescoord voordat de gebruiker de app opent
 - **Directe Supabase REST**: de frontend praat rechtstreeks met Supabase, geen eigen API-laag nodig

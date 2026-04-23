@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { getSupabase, type NewsItem, type FeedbackRating } from '@/lib/supabase'
+import NavMenu from '@/components/NavMenu'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type Layout = 'list' | 'briefing' | 'clusters' | 'gallery' | 'stream'
@@ -168,25 +169,12 @@ function ListLayout({
   return (
     <div className="atelier">
       <div className="atelier__statusbar">
-        <span className="atelier__prompt">
-          <span className="atelier__prompt-dollar">~</span>edwin / feed · ai
-        </span>
-        <span>·</span><span>{items.length} items</span>
-        <span>·</span><span>↑↓ / jk navigeer</span>
-        <span>·</span><span>↵ open · 1 2 3 reageer</span>
-        <span style={{ flex: 1 }} />
-        <span>{dateStr}</span>
-        <span className="atelier__cursor">█</span>
+        <span>{items.length} items</span>
+        <span>·</span><span>↑↓ / jk</span>
+        <span>·</span><span>↵ open</span>
+        <span>·</span><span>1 2 3 reageer</span>
       </div>
       <div className="atelier__rows">
-        <div className="atelier__header-row">
-          <span style={{ width: 28 }} />
-          <span style={{ width: 60 }}>Score</span>
-          <span style={{ width: 160 }}>Bron</span>
-          <span style={{ width: 96 }}>Tijd</span>
-          <span style={{ flex: 1 }}>Titel</span>
-          <span style={{ width: 160, textAlign: 'right' }}>Reactie</span>
-        </div>
         {items.map((it, idx) => {
           const isC = idx === cursor
           const isE = expanded[it.id]
@@ -475,6 +463,20 @@ function StreamLayout({
   )
 }
 
+// ── Loader ───────────────────────────────────────────────────────────────────
+function Loader() {
+  return (
+    <div className="loader">
+      <div className="loader__marks">
+        <span className="loader__mark" style={{ animationDelay: '0ms' }}>◆</span>
+        <span className="loader__mark" style={{ animationDelay: '200ms' }}>◆</span>
+        <span className="loader__mark" style={{ animationDelay: '400ms' }}>◆</span>
+      </div>
+      <span className="loader__label">laden</span>
+    </div>
+  )
+}
+
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function HomePage() {
   const [items, setItems] = useState<FeedItem[]>([])
@@ -520,7 +522,7 @@ export default function HomePage() {
       .select('*')
       .gte('created_at', cutoff)
       .order('score', { ascending: false })
-      .limit(30)
+      .limit(10)
     setItems((data ?? []).map(toFeedItem))
     setLoading(false)
   }, [])
@@ -550,7 +552,6 @@ export default function HomePage() {
       localStorage.setItem('ef:reactions', JSON.stringify(next))
       return next
     })
-    // Post to Supabase
     const rating = RATING_MAP[key]
     await getSupabase().from('user_feedback').upsert({
       news_item_id: id,
@@ -640,17 +641,23 @@ export default function HomePage() {
     <div className="app">
       <header className="masthead">
         <div className="masthead__top">
+          {/* Links: brand + datum */}
           <div className="masthead__brand">
-            <span className="masthead__mark">◆</span>
-            <span>edwin's feed</span>
+            <div className="masthead__brand-row">
+              <span className="masthead__mark">◆</span>
+              <span>edwin's feed</span>
+            </div>
+            <span className="masthead__subtitle">{todayStr} · {sourceCount} bronnen</span>
           </div>
-          <div className="masthead__meta">
-            <span>{todayStr}</span>
-            <span>·</span>
-            <span>{sourceCount} bronnen</span>
-            <span>·</span>
-            <a href="/opgeslagen" style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-dim)', textDecoration: 'none' }}>opgeslagen</a>
-            <a href="/voorkeuren" style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-dim)', textDecoration: 'none' }}>voorkeuren</a>
+
+          {/* Midden: navigatie */}
+          <nav className="masthead__nav">
+            <a href="/opgeslagen" className="masthead__nav-link">opgeslagen</a>
+            <a href="/voorkeuren" className="masthead__nav-link">voorkeuren</a>
+          </nav>
+
+          {/* Rechts: controls */}
+          <div className="masthead__controls">
             <div className="theme-picker">
               {(['obsidian','graphite','porcelain','linen','bone'] as Theme[]).map(t => (
                 <button
@@ -662,25 +669,18 @@ export default function HomePage() {
                 />
               ))}
             </div>
-            <span>·</span>
             <button
+              className="chip"
               onClick={triggerFetch}
               disabled={fetching}
-              style={{ fontFamily: 'var(--mono)', fontSize: 11, background: 'none', border: '1px solid var(--rule-strong)', borderRadius: 6, padding: '3px 9px', color: 'var(--ink-dim)', cursor: fetching ? 'default' : 'pointer', opacity: fetching ? 0.6 : 1 }}
+              style={{ opacity: fetching ? 0.6 : 1 }}
             >
               {fetching ? '…' : '↺ ophalen'}
             </button>
-            <button
-              onClick={resetToday}
-              style={{ fontFamily: 'var(--mono)', fontSize: 11, background: 'none', border: '1px solid var(--rule-strong)', borderRadius: 6, padding: '3px 9px', color: 'var(--ink-soft)', cursor: 'pointer' }}
-            >
-              ✕ wis
-            </button>
             {fetchMsg && (
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-dim)', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {fetchMsg}
-              </span>
+              <span className="masthead__msg">{fetchMsg}</span>
             )}
+            <NavMenu current="/" />
           </div>
         </div>
 
@@ -696,6 +696,14 @@ export default function HomePage() {
               </button>
             ))}
             <div style={{ flex: 1 }} />
+            <button
+              className="chip filterrow__fetch"
+              onClick={triggerFetch}
+              disabled={fetching}
+              style={{ opacity: fetching ? 0.6 : 1, flexShrink: 0 }}
+            >
+              {fetching ? '…' : '↺ ophalen'}
+            </button>
             <div className="filterrow__search">
               <span className="filterrow__srch-icon">⌕</span>
               <input
@@ -709,7 +717,6 @@ export default function HomePage() {
           </div>
 
           <div className="layoutrow">
-            <span className="layoutrow__label">Layout</span>
             {(['list','briefing','clusters','gallery','stream'] as Layout[]).map(l => (
               <button
                 key={l}
@@ -725,9 +732,7 @@ export default function HomePage() {
 
       <div id="feed">
         {loading ? (
-          <div style={{ padding: '60px 0', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-soft)', letterSpacing: '0.1em' }}>
-            laden…
-          </div>
+          <Loader />
         ) : filtered.length === 0 ? (
           <div style={{ padding: '60px 0', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-soft)' }}>
             {items.length === 0 ? 'Geen artikelen vandaag — klik ↺ ophalen om nieuws te laden.' : 'Geen artikelen voor dit filter.'}

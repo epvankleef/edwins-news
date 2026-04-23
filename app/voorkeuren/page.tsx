@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getSupabase } from '@/lib/supabase'
+import NavMenu from '@/components/NavMenu'
 
 type ProfileRow = { profile: string; updated_at: string }
 type FeedbackRow = { rating: number; news_items: { category: string | null; source: string | null } | null }
@@ -109,12 +110,13 @@ export default function VoorkeurenPage() {
               <span style={{ color: 'var(--accent)', fontSize: 20 }}>◆</span>
               voorkeuren
             </div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-soft)', display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span style={{ color: 'var(--ink-dim)' }}>{totalFeedback} beoordelingen totaal</span>
-              <span>·</span>
-              <a href="/" style={{ color: 'var(--ink-dim)', textDecoration: 'none' }}>← feed</a>
-              <span>·</span>
-              <a href="/opgeslagen" style={{ color: 'var(--ink-dim)', textDecoration: 'none' }}>opgeslagen</a>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <nav className="masthead__nav desktop-nav">
+                <a href="/" className="masthead__nav-link">feed</a>
+                <a href="/opgeslagen" className="masthead__nav-link">opgeslagen</a>
+                <a href="/voorkeuren" className="masthead__nav-link masthead__nav-link--active">voorkeuren</a>
+              </nav>
+              <NavMenu current="/voorkeuren" />
             </div>
           </div>
         </header>
@@ -135,15 +137,10 @@ export default function VoorkeurenPage() {
                     </span>
                   )}
                   <button
+                    className="chip"
                     onClick={handleUpdate}
                     disabled={updating}
-                    style={{
-                      padding: '5px 11px', borderRadius: 999,
-                      border: '1px solid var(--rule-strong)',
-                      background: 'transparent', color: 'var(--ink-dim)',
-                      fontFamily: 'var(--mono)', fontSize: 11, cursor: updating ? 'default' : 'pointer',
-                      opacity: updating ? 0.5 : 1,
-                    }}
+                    style={{ opacity: updating ? 0.5 : 1, cursor: updating ? 'default' : 'pointer' }}
                   >
                     {updating ? '…bijwerken' : '↻ bijwerken'}
                   </button>

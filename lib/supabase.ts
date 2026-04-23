@@ -12,13 +12,6 @@ export function getSupabase(): SupabaseClient {
   return _supabase
 }
 
-/** @deprecated use getSupabase() */
-export const supabase = new Proxy({} as SupabaseClient, {
-  get(_target, prop) {
-    return (getSupabase() as unknown as Record<string | symbol, unknown>)[prop]
-  },
-})
-
 export type NewsItem = {
   id: string
   title: string

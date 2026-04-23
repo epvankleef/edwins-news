@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getSupabase, type NewsItem } from '@/lib/supabase'
+import NavMenu from '@/components/NavMenu'
 
 type FilterTab = 'alles' | 'interessant' | 'mwah' | 'nope'
 
@@ -84,15 +85,18 @@ export default function OpgeslagenPage() {
 
         {/* Header */}
         <header style={{ borderBottom: '1px solid var(--rule)', paddingBottom: 18, marginBottom: 22 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 10, fontFamily: 'var(--title)', fontSize: 32, letterSpacing: '-0.015em', lineHeight: 1.1, color: 'var(--ink)' }}>
               <span style={{ color: 'var(--accent)', fontSize: 20 }}>◆</span>
               opgeslagen
             </div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-soft)', display: 'flex', gap: 8, alignItems: 'center' }}>
-              <a href="/" style={{ color: 'var(--ink-dim)', textDecoration: 'none' }}>← feed</a>
-              <span>·</span>
-              <a href="/voorkeuren" style={{ color: 'var(--ink-dim)', textDecoration: 'none' }}>voorkeuren</a>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <nav className="masthead__nav desktop-nav">
+                <a href="/" className="masthead__nav-link">feed</a>
+                <a href="/opgeslagen" className="masthead__nav-link masthead__nav-link--active">opgeslagen</a>
+                <a href="/voorkeuren" className="masthead__nav-link">voorkeuren</a>
+              </nav>
+              <NavMenu current="/opgeslagen" />
             </div>
           </div>
 
@@ -101,15 +105,8 @@ export default function OpgeslagenPage() {
             {tabs.map(({ key, label, emoji }) => (
               <button
                 key={key}
+                className={`chip ${filter === key ? 'chip--on' : ''}`}
                 onClick={() => setFilter(key)}
-                style={{
-                  padding: '5px 11px', borderRadius: 999,
-                  border: `1px solid ${filter === key ? 'var(--ink)' : 'var(--rule-strong)'}`,
-                  background: filter === key ? 'var(--ink)' : 'transparent',
-                  color: filter === key ? 'var(--bg)' : 'var(--ink-dim)',
-                  fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 500,
-                  cursor: 'pointer', letterSpacing: '0.02em',
-                }}
               >
                 {emoji && <span style={{ marginRight: 5 }}>{emoji}</span>}
                 {label} <span style={{ opacity: 0.6 }}>({counts[key]})</span>
@@ -137,12 +134,12 @@ export default function OpgeslagenPage() {
         ) : (
           <div style={{ fontFamily: 'var(--mono)', border: '1px solid var(--rule)', borderRadius: 16, background: 'var(--surface)', backdropFilter: 'blur(10px)', overflow: 'hidden', boxShadow: 'var(--inner-hi),var(--shadow)' }}>
             {/* Col headers */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 22px 10px', fontSize: 9, letterSpacing: '0.14em', color: 'var(--ink-soft)', textTransform: 'uppercase', fontWeight: 600, borderBottom: '1px solid var(--rule)' }}>
-              <span style={{ width: 70 }}>Reactie</span>
-              <span style={{ width: 60 }}>Score</span>
-              <span style={{ width: 160 }}>Bron</span>
-              <span style={{ flex: 1 }}>Titel</span>
-              <span style={{ width: 120, textAlign: 'right' }}>Datum</span>
+            <div className="saved-header">
+              <span className="saved-col-rx">Reactie</span>
+              <span className="saved-col-score">Score</span>
+              <span className="saved-col-src">Bron</span>
+              <span className="saved-col-title">Titel</span>
+              <span className="saved-col-date">Datum</span>
             </div>
 
             {filtered.map(({ article: a, rating }) => (
@@ -151,35 +148,23 @@ export default function OpgeslagenPage() {
                 href={a.url ?? '#'}
                 target="_blank"
                 rel="noreferrer"
-                style={{ textDecoration: 'none' }}
+                className="saved-row"
               >
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 14,
-                  padding: '13px 22px', borderTop: '1px solid var(--rule)',
-                  cursor: 'pointer', transition: 'background 140ms',
-                  fontSize: 13, color: 'var(--ink-dim)',
-                }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                >
-                  <span style={{ width: 70, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <span>{RATING_EMOJI[rating]}</span>
-                    <span style={{ fontSize: 10, letterSpacing: '0.04em' }}>{RATING_LABEL[rating]}</span>
-                  </span>
-                  <span style={{ width: 60, fontWeight: 700, color: scoreColor(a.score ?? 5), fontVariantNumeric: 'tabular-nums' }}>
-                    {a.score ?? '—'}<span style={{ color: 'var(--ink-soft)', fontWeight: 500, fontSize: 11 }}>/10</span>
-                  </span>
-                  <span style={{ width: 160, display: 'inline-flex', alignItems: 'center', gap: 7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: srcColor(a.source ?? ''), flexShrink: 0, display: 'inline-block' }} />
-                    {a.source}
-                  </span>
-                  <span style={{ flex: 1, color: 'var(--ink)', fontFamily: 'var(--title)', fontSize: 17, letterSpacing: '-0.015em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {a.title}
-                  </span>
-                  <span style={{ width: 120, textAlign: 'right', fontSize: 11, color: 'var(--ink-soft)' }}>
-                    {a.published_at ? formatDate(a.published_at) : ''}
-                  </span>
-                </div>
+                <span className="saved-col-rx">
+                  <span>{RATING_EMOJI[rating]}</span>
+                  <span className="saved-rx-label">{RATING_LABEL[rating]}</span>
+                </span>
+                <span className="saved-col-score" style={{ color: scoreColor(a.score ?? 5) }}>
+                  {a.score ?? '—'}<span className="saved-score-denom">/10</span>
+                </span>
+                <span className="saved-col-src">
+                  <span className="saved-src-dot" style={{ background: srcColor(a.source ?? '') }} />
+                  <span className="saved-src-name">{a.source}</span>
+                </span>
+                <span className="saved-col-title">{a.title}</span>
+                <span className="saved-col-date">
+                  {a.published_at ? formatDate(a.published_at) : ''}
+                </span>
               </a>
             ))}
 
