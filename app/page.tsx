@@ -197,9 +197,12 @@ function ListLayout({
     <div className="atelier">
       <div className="atelier__statusbar">
         <span>{items.length} items</span>
-        <span>·</span><span>↑↓ / jk</span>
-        <span>·</span><span>↵ open</span>
-        <span>·</span><span>1 2 3 reageer</span>
+        <span>·</span>
+        <span>{Object.keys(reactions).filter(id => items.some(it => it.id === id)).length} beoordeeld</span>
+        <span>·</span>
+        <span>{items.filter(it => !reactions[it.id]).length} ongelezen</span>
+        <span style={{ flex: 1 }} />
+        <span style={{ color: 'var(--ink-soft)', opacity: 0.55, fontSize: 11 }}>jk · ↵ · 1–3</span>
       </div>
       <div className="atelier__colheads">
         <span style={{ width: 28 }} />
