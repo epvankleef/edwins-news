@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react'
 import { getSupabase, type NewsItem } from '@/lib/supabase'
 import NavMenu from '@/components/NavMenu'
 
-type FilterTab = 'alles' | 'interessant' | 'mwah' | 'nope'
-
 const RATING_LABEL: Record<number, string> = { 3: 'interessant', 2: 'mwah', 1: 'nope' }
 const RATING_EMOJI: Record<number, string> = { 3: '👍', 2: '🫤', 1: '👎' }
 
@@ -30,21 +28,20 @@ function formatDate(iso: string) {
 export default function OpgeslagenPage() {
   const [items, setItems] = useState<{ article: NewsItem; rating: number }[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<FilterTab>('alles')
 
   useEffect(() => {
     async function load() {
       const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      // Alleen 👍 interessant (rating 3)
       const { data: feedback } = await getSupabase()
         .from('user_feedback')
         .select('news_item_id, rating')
+        .eq('rating', 3)
         .gte('created_at', since30)
 
       if (!feedback?.length) { setLoading(false); return }
 
       const ids = feedback.map(f => f.news_item_id)
-      const ratingMap: Record<string, number> = {}
-      for (const f of feedback) ratingMap[f.news_item_id] = f.rating
 
       const { data: articles } = await getSupabase()
         .from('news_items')
@@ -52,32 +49,11 @@ export default function OpgeslagenPage() {
         .in('id', ids)
         .order('created_at', { ascending: false })
 
-      setItems((articles ?? []).map(a => ({ article: a as NewsItem, rating: ratingMap[a.id] ?? 2 })))
+      setItems((articles ?? []).map(a => ({ article: a as NewsItem, rating: 3 })))
       setLoading(false)
     }
     load()
   }, [])
-
-  const filtered = items.filter(({ rating }) => {
-    if (filter === 'interessant') return rating === 3
-    if (filter === 'mwah') return rating === 2
-    if (filter === 'nope') return rating === 1
-    return true
-  })
-
-  const counts = {
-    alles: items.length,
-    interessant: items.filter(i => i.rating === 3).length,
-    mwah: items.filter(i => i.rating === 2).length,
-    nope: items.filter(i => i.rating === 1).length,
-  }
-
-  const tabs: { key: FilterTab; label: string; emoji: string }[] = [
-    { key: 'alles',        label: `Alles`,        emoji: '' },
-    { key: 'interessant',  label: `Interessant`,  emoji: '👍' },
-    { key: 'mwah',         label: `Mwah`,         emoji: '🫤' },
-    { key: 'nope',         label: `Niet voor mij`, emoji: '👎' },
-  ]
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--ink)' }}>
@@ -101,49 +77,32 @@ export default function OpgeslagenPage() {
             </div>
           </div>
 
-          {/* Tabs */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 16 }}>
-            {tabs.map(({ key, label, emoji }) => (
-              <button
-                key={key}
-                className={`chip ${filter === key ? 'chip--on' : ''}`}
-                onClick={() => setFilter(key)}
-              >
-                {emoji && <span style={{ marginRight: 5 }}>{emoji}</span>}
-                {label} <span style={{ opacity: 0.6 }}>({counts[key]})</span>
-              </button>
-            ))}
-          </div>
-        </header>
+          </header>
 
         {/* Content */}
         {loading ? (
           <div style={{ padding: '60px 0', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-soft)', letterSpacing: '0.1em' }}>
             laden…
           </div>
-        ) : filtered.length === 0 ? (
+        ) : items.length === 0 ? (
           <div style={{ padding: '60px 0', textAlign: 'center' }}>
             <p style={{ fontFamily: 'var(--serif)', fontSize: 18, color: 'var(--ink-dim)', fontStyle: 'italic' }}>
-              {items.length === 0 ? 'Nog niets beoordeeld.' : 'Geen artikelen in dit filter.'}
+              Nog geen artikelen opgeslagen.
             </p>
-            {items.length === 0 && (
-              <a href="/" style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', marginTop: 12, display: 'inline-block' }}>
-                ← ga naar de feed
-              </a>
-            )}
+            <a href="/" style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', marginTop: 12, display: 'inline-block' }}>
+              ← ga naar de feed
+            </a>
           </div>
         ) : (
           <div style={{ fontFamily: 'var(--mono)', border: '1px solid var(--rule)', borderRadius: 16, background: 'var(--surface)', backdropFilter: 'blur(10px)', overflow: 'hidden', boxShadow: 'var(--inner-hi),var(--shadow)' }}>
-            {/* Col headers */}
             <div className="saved-header">
-              <span className="saved-col-rx">Reactie</span>
               <span className="saved-col-score">Score</span>
               <span className="saved-col-src">Bron</span>
               <span className="saved-col-title">Titel</span>
               <span className="saved-col-date">Datum</span>
             </div>
 
-            {filtered.map(({ article: a, rating }) => (
+            {items.map(({ article: a }) => (
               <a
                 key={a.id}
                 href={a.url ?? '#'}
@@ -151,10 +110,6 @@ export default function OpgeslagenPage() {
                 rel="noreferrer"
                 className="saved-row"
               >
-                <span className="saved-col-rx">
-                  <span>{RATING_EMOJI[rating]}</span>
-                  <span className="saved-rx-label">{RATING_LABEL[rating]}</span>
-                </span>
                 <span className="saved-col-score" style={{ color: scoreColor(a.score ?? 5) }}>
                   {a.score ?? '—'}<span className="saved-score-denom">/10</span>
                 </span>
@@ -171,7 +126,7 @@ export default function OpgeslagenPage() {
 
             <div style={{ padding: '20px 22px', fontSize: 10, letterSpacing: '0.14em', color: 'var(--ink-soft)', textAlign: 'center', borderTop: '1px solid var(--rule)', fontWeight: 500 }}>
               <span style={{ display: 'inline-block', width: 32, height: 1, background: 'var(--rule-strong)', verticalAlign: 'middle', margin: '0 10px' }} />
-              {filtered.length} beoordeeld · laatste 30 dagen
+              {items.length} opgeslagen · laatste 30 dagen
               <span style={{ display: 'inline-block', width: 32, height: 1, background: 'var(--rule-strong)', verticalAlign: 'middle', margin: '0 10px' }} />
             </div>
           </div>
