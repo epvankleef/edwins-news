@@ -6,6 +6,7 @@ const LINKS = [
   { href: '/',            label: '◆ feed' },
   { href: '/opgeslagen',  label: 'opgeslagen' },
   { href: '/voorkeuren',  label: 'voorkeuren' },
+  { href: '/bronnen',     label: 'bronnen' },
 ]
 
 const THEMES = ['obsidian', 'graphite', 'porcelain', 'linen', 'bone'] as const
@@ -15,7 +16,7 @@ const THEME_COLOR: Record<Theme, string> = {
   linen: '#F5F0E8', bone: '#FAFAF8',
 }
 
-export default function NavMenu({ current }: { current: '/' | '/opgeslagen' | '/voorkeuren' }) {
+export default function NavMenu({ current }: { current: '/' | '/opgeslagen' | '/voorkeuren' | '/bronnen' }) {
   const [open, setOpen] = useState(false)
   const [theme, setTheme] = useState<Theme>('porcelain')
 

@@ -95,6 +95,7 @@ export default function OpgeslagenPage() {
                 <a href="/" className="masthead__nav-link">feed</a>
                 <a href="/opgeslagen" className="masthead__nav-link masthead__nav-link--active">opgeslagen</a>
                 <a href="/voorkeuren" className="masthead__nav-link">voorkeuren</a>
+                <a href="/bronnen" className="masthead__nav-link">bronnen</a>
               </nav>
               <NavMenu current="/opgeslagen" />
             </div>
