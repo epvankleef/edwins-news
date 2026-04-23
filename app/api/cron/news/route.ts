@@ -128,9 +128,9 @@ function titleSimilar(a: string, b: string): boolean {
   return overlap / Math.min(wa.size, wb.size) >= 0.6
 }
 
-function deduplicate(articles: Article[]): Article[] {
+function deduplicate(articles: Article[], ratedTitles: string[] = []): Article[] {
   const seenUrls = new Set<string>()
-  const seenTitles: string[] = []
+  const seenTitles: string[] = [...ratedTitles]
   return articles.filter((a) => {
     if (seenUrls.has(a.url)) return false
     if (seenTitles.some(t => titleSimilar(t, a.title))) return false
@@ -249,7 +249,23 @@ export async function GET(req: NextRequest) {
 
         await Promise.all([...rssPromises, hnPromise])
 
-        const deduped = deduplicate(allArticles)
+        // Haal titels op van artikelen beoordeeld in de laatste 14 dagen
+        const cutoff14 = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+        const { data: ratedItems } = await supabase
+          .from('user_feedback')
+          .select('news_items(title)')
+          .gte('created_at', cutoff14)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ratedTitles = (ratedItems as any[] ?? [])
+          .flatMap((r) => {
+            const ni = r.news_items
+            if (!ni) return []
+            if (Array.isArray(ni)) return ni.map((n: { title: string }) => n.title)
+            return [ni.title as string]
+          })
+          .filter(Boolean) as string[]
+
+        const deduped = deduplicate(allArticles, ratedTitles)
 
         // Filter out URLs already in the database today
         const today = new Date().toISOString().split('T')[0]
