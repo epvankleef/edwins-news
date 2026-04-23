@@ -675,7 +675,7 @@ export default function HomePage() {
               disabled={fetching}
               style={{ opacity: fetching ? 0.6 : 1 }}
             >
-              {fetching ? <span className="fetch-inline">◆</span> : '↺ ophalen'}
+              ↺ ophalen
             </button>
             {fetching ? (
               <span className="fetch-pulse">
@@ -707,7 +707,7 @@ export default function HomePage() {
               disabled={fetching}
               style={{ opacity: fetching ? 0.6 : 1, flexShrink: 0 }}
             >
-              {fetching ? <span className="fetch-inline">◆</span> : '↺ ophalen'}
+              ↺ ophalen
             </button>
             <div className="filterrow__search">
               <span className="filterrow__srch-icon">⌕</span>
