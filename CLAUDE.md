@@ -1,6 +1,7 @@
 # CLAUDE.md
 
 Dit bestand geeft richtlijnen aan Claude Code (claude.ai/code) bij het werken in deze repository.
+<!-- deploy test -->
 
 ## Projectoverzicht
 
