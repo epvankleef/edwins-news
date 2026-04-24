@@ -8,7 +8,7 @@ import NavMenu from '@/components/NavMenu'
 type Layout = 'list' | 'briefing' | 'clusters' | 'gallery' | 'stream'
 type Theme = 'obsidian' | 'graphite' | 'porcelain' | 'linen' | 'bone'
 type FontKey = 'instrument' | 'fraunces' | 'dmserif' | 'grotesk' | 'geist' | 'mono'
-type FilterMode = 'all' | 'hot' | 'high' | 'nl' | 'unread'
+type FilterMode = 'all' | 'hot' | 'high' | 'nl'
 type ReactKey = 'interessant' | 'mwah' | 'nope'
 
 interface FeedItem {
@@ -535,7 +535,7 @@ export default function HomePage() {
   const [theme, setTheme] = useState<Theme>('porcelain')
   const [layout, setLayout] = useState<Layout>('list')
   const [font, setFont] = useState<FontKey>('instrument')
-  const [filterMode, setFilterMode] = useState<FilterMode>('unread')
+  const [filterMode, setFilterMode] = useState<FilterMode>('all')
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
@@ -617,12 +617,12 @@ export default function HomePage() {
 
   useEffect(() => { loadArticles() }, [loadArticles])
 
-  // Apply filters
+  // Apply filters — beoordeelde artikelen altijd verbergen
   const filtered = items.filter(it => {
+    if (reactions[it.id]) return false
     if (filterMode === 'hot' && !it.hot) return false
     if (filterMode === 'high' && it.score < 8) return false
     if (filterMode === 'nl' && !isNL(it)) return false
-    if (filterMode === 'unread' && reactions[it.id]) return false
     if (query) {
       const q = query.toLowerCase()
       const hay = `${it.title} ${it.summary} ${it.source} ${it.tags.join(' ')}`.toLowerCase()
@@ -731,9 +731,12 @@ export default function HomePage() {
         <div className="masthead__top">
           {/* Links: brand + datum */}
           <div className="masthead__brand">
-            <div className="masthead__brand-row">
-              <span className="masthead__mark">◆</span>
-              <span>edwin's feed</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div className="masthead__brand-row">
+                <span className="masthead__mark">◆</span>
+                <span>edwin's feed</span>
+              </div>
+              <div className="mobile-hamburger"><NavMenu current="/" /></div>
             </div>
             <span className="masthead__subtitle">{todayStr} · {sourceCount} bronnen</span>
           </div>
@@ -781,13 +784,13 @@ export default function HomePage() {
 
         <div className="masthead__filters">
           <div className="filterrow">
-            {(['all','hot','high','nl','unread'] as FilterMode[]).map(mode => (
+            {(['all','hot','high','nl'] as FilterMode[]).map(mode => (
               <button
                 key={mode}
                 className={`chip ${filterMode === mode ? 'chip--on' : ''}`}
                 onClick={() => { setFilterMode(mode); setCursor(0) }}
               >
-                {mode === 'all' ? 'Alles' : mode === 'hot' ? 'Hot' : mode === 'high' ? '8+' : mode === 'nl' ? 'NL' : 'Ongelezen'}
+                {mode === 'all' ? 'Alles' : mode === 'hot' ? 'Hot' : mode === 'high' ? '8+' : 'NL'}
               </button>
             ))}
             <div style={{ flex: 1 }} />
@@ -797,7 +800,7 @@ export default function HomePage() {
               disabled={fetching}
               style={{ opacity: fetching ? 0.6 : 1, flexShrink: 0 }}
             >
-              ↺ ophalen
+              {fetching ? '↺ …' : '↺ ophalen'}
             </button>
             <div className="filterrow__search">
               <span className="filterrow__srch-icon">⌕</span>
@@ -822,6 +825,12 @@ export default function HomePage() {
               </button>
             ))}
           </div>
+          {/* Ophaal-status op mobiel */}
+          {fetchMsg && (
+            <div className="mobile-hamburger" style={{ padding: '6px 0 0', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-dim)' }}>
+              {fetchMsg}
+            </div>
+          )}
         </div>
       </header>
 
