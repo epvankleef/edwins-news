@@ -321,7 +321,7 @@ kbd{display:inline-block;padding:1px 5px;border:1px solid var(--rule-strong);bor
   .masthead__nav{display:none}
   .masthead__controls{display:none}
   .desktop-nav{display:none}
-  .hamburger{display:flex}
+  .hamburger{display:flex;position:fixed;top:14px;right:14px;z-index:101;background:var(--surface-solid)}
   .mobile-hamburger{display:flex;align-items:center}
   .briefing__heroes{grid-template-columns:1fr}
   .brow{grid-template-columns:34px 1fr auto;gap:10px}
