@@ -33,8 +33,11 @@ export default function NavMenu({ current }: { current: '/' | '/opgeslagen' | '/
 
   return (
     <>
-      <button className="hamburger" onClick={() => setOpen(o => !o)} aria-label="Menu">
-        <span className="hamburger-bars"><span /><span /><span /></span>
+      <button className="hamburger" onClick={() => setOpen(o => !o)} aria-label={open ? 'Sluiten' : 'Menu'}>
+        {open
+          ? <span style={{ fontSize: 16, lineHeight: 1 }}>✕</span>
+          : <span className="hamburger-bars"><span /><span /><span /></span>
+        }
       </button>
 
       <div
@@ -44,9 +47,6 @@ export default function NavMenu({ current }: { current: '/' | '/opgeslagen' | '/
       />
 
       <div className={`nav-drawer${open ? ' nav-drawer--open' : ''}`}>
-        <button className="nav-drawer__close" onClick={() => setOpen(false)} aria-label="Sluiten">
-          ✕
-        </button>
 
         <nav className="nav-drawer__links">
           {LINKS.map(({ href, label }) => (
