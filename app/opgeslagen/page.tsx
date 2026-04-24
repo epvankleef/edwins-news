@@ -98,7 +98,7 @@ export default function OpgeslagenPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 6, marginTop: 16 }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 16, overflowX: 'auto' }}>
             {TABS.map(({ key, emoji, label }) => (
               <button
                 key={key}
