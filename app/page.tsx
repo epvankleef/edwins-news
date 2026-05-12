@@ -562,57 +562,57 @@ export default function HomePage() {
   // Fetch articles from Supabase
   const loadArticles = useCallback(async () => {
     setLoading(true)
-    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+    try {
+      const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
 
-    const [{ data: newsData }, { data: fbData }] = await Promise.all([
-      getSupabase()
-        .from('news_items')
-        .select('*')
-        .gte('created_at', cutoff)
-        .order('score', { ascending: false })
-        .limit(60),
-      getSupabase()
-        .from('user_feedback')
-        .select('news_item_id, rating'),
-    ])
+      const [{ data: newsData }, { data: fbData }] = await Promise.all([
+        getSupabase()
+          .from('news_items')
+          .select('*')
+          .gte('created_at', cutoff)
+          .order('score', { ascending: false })
+          .limit(60),
+        getSupabase()
+          .from('user_feedback')
+          .select('news_item_id, rating'),
+      ])
 
-    // Bouw reactie-map op uit Supabase + localStorage
-    const REVERSE: Record<number, ReactKey> = { 3: 'interessant', 2: 'mwah', 1: 'nope' }
-    const stored = (() => { try { return JSON.parse(localStorage.getItem('ef:reactions') ?? '{}') } catch { return {} } })()
-    const allReactions: Record<string, ReactKey> = { ...stored }
-    for (const fb of (fbData ?? [])) {
-      const key = REVERSE[fb.rating as number]
-      if (key) allReactions[String(fb.news_item_id)] = key
-    }
-
-    // Dedupliceer op URL — groepeer per URL, kies hoogste score
-    // Draag bestaande reactie over naar de winnaar (zelfde artikel, andere bron/ID)
-    const groups = new Map<string, ReturnType<typeof toFeedItem>[]>()
-    for (const raw of (newsData ?? [])) {
-      const item = toFeedItem(raw)
-      const key = item.url === '#' ? item.id : item.url
-      if (!groups.has(key)) groups.set(key, [])
-      groups.get(key)!.push(item)
-    }
-
-    const mergedReactions: Record<string, ReactKey> = { ...allReactions }
-    const deduped: ReturnType<typeof toFeedItem>[] = []
-    for (const group of groups.values()) {
-      group.sort((a, b) => b.score - a.score)
-      const winner = group[0]
-      // Als een ander exemplaar van dit artikel al beoordeeld is, koppel dat aan de winnaar
-      const ratedSibling = group.find(it => allReactions[it.id])
-      if (ratedSibling && !mergedReactions[winner.id]) {
-        mergedReactions[winner.id] = allReactions[ratedSibling.id]
+      const REVERSE: Record<number, ReactKey> = { 3: 'interessant', 2: 'mwah', 1: 'nope' }
+      const stored = (() => { try { return JSON.parse(localStorage.getItem('ef:reactions') ?? '{}') } catch { return {} } })()
+      const allReactions: Record<string, ReactKey> = { ...stored }
+      for (const fb of (fbData ?? [])) {
+        const key = REVERSE[fb.rating as number]
+        if (key) allReactions[String(fb.news_item_id)] = key
       }
-      deduped.push(winner)
+
+      const groups = new Map<string, ReturnType<typeof toFeedItem>[]>()
+      for (const raw of (newsData ?? [])) {
+        const item = toFeedItem(raw)
+        const key = item.url === '#' ? item.id : item.url
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key)!.push(item)
+      }
+
+      const mergedReactions: Record<string, ReactKey> = { ...allReactions }
+      const deduped: ReturnType<typeof toFeedItem>[] = []
+      for (const group of groups.values()) {
+        group.sort((a, b) => b.score - a.score)
+        const winner = group[0]
+        const ratedSibling = group.find(it => allReactions[it.id])
+        if (ratedSibling && !mergedReactions[winner.id]) {
+          mergedReactions[winner.id] = allReactions[ratedSibling.id]
+        }
+        deduped.push(winner)
+      }
+
+      setItems(deduped)
+      localStorage.setItem('ef:reactions', JSON.stringify(mergedReactions))
+      setReactions(mergedReactions)
+    } catch (err) {
+      console.error('loadArticles fout:', err)
+    } finally {
+      setLoading(false)
     }
-
-    setItems(deduped)
-    localStorage.setItem('ef:reactions', JSON.stringify(mergedReactions))
-    setReactions(mergedReactions)
-
-    setLoading(false)
   }, [])
 
   useEffect(() => { loadArticles() }, [loadArticles])
@@ -731,12 +731,9 @@ export default function HomePage() {
         <div className="masthead__top">
           {/* Links: brand + datum */}
           <div className="masthead__brand">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div className="masthead__brand-row">
-                <span className="masthead__mark">◆</span>
-                <span>edwin's feed</span>
-              </div>
-              <div className="mobile-hamburger"><NavMenu current="/" /></div>
+            <div className="masthead__brand-row">
+              <span className="masthead__mark">◆</span>
+              <span>edwin's feed</span>
             </div>
             <span className="masthead__subtitle">{todayStr} · {sourceCount} bronnen</span>
           </div>

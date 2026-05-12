@@ -22,7 +22,10 @@ export default function NavMenu({ current }: { current: '/' | '/opgeslagen' | '/
 
   useEffect(() => {
     const t = localStorage.getItem('ef:theme') as Theme | null
-    if (t && THEMES.includes(t)) setTheme(t)
+    if (t && THEMES.includes(t)) {
+      setTheme(t)
+      document.body.setAttribute('data-theme', t)
+    }
   }, [])
 
   function applyTheme(t: Theme) {
