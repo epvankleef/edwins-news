@@ -570,7 +570,7 @@ export default function HomePage() {
           .select('*')
           .gte('created_at', cutoff)
           .order('score', { ascending: false })
-          .limit(60),
+          .limit(10),
         getSupabase()
           .from('user_feedback')
           .select('news_item_id, rating'),

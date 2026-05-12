@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getSupabase, type NewsItem } from '@/lib/supabase'
+import PageHeader from '@/components/PageHeader'
 
 type Tab = 'alles' | 'interessant' | 'mwah' | 'nope'
 
@@ -78,38 +79,22 @@ export default function OpgeslagenPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--ink)' }}>
+      <PageHeader title="opgeslagen" />
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 28px 80px', position: 'relative', zIndex: 1 }}>
 
-        <header style={{ borderBottom: '1px solid var(--rule)', paddingBottom: 18, marginBottom: 22 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 10, fontFamily: 'var(--title)', fontSize: 32, letterSpacing: '-0.015em', lineHeight: 1.1, color: 'var(--ink)' }}>
-              <span style={{ color: 'var(--accent)', fontSize: 20 }}>◆</span>
-              opgeslagen
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <nav className="masthead__nav desktop-nav">
-                <a href="/" className="masthead__nav-link">feed</a>
-                <a href="/opgeslagen" className="masthead__nav-link masthead__nav-link--active">opgeslagen</a>
-                <a href="/voorkeuren" className="masthead__nav-link">voorkeuren</a>
-                <a href="/bronnen" className="masthead__nav-link">bronnen</a>
-              </nav>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 6, marginTop: 16, overflowX: 'auto' }}>
-            {TABS.map(({ key, emoji, label }) => (
-              <button
-                key={key}
-                className={`chip ${tab === key ? 'chip--on' : ''}`}
-                onClick={() => setTab(key)}
-              >
-                {emoji && <span style={{ marginRight: 4 }}>{emoji}</span>}
-                {label}
-                <span style={{ opacity: 0.55, marginLeft: 5 }}>({counts[key]})</span>
-              </button>
-            ))}
-          </div>
-        </header>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 22, overflowX: 'auto' }}>
+          {TABS.map(({ key, emoji, label }) => (
+            <button
+              key={key}
+              className={`chip ${tab === key ? 'chip--on' : ''}`}
+              onClick={() => setTab(key)}
+            >
+              {emoji && <span style={{ marginRight: 4 }}>{emoji}</span>}
+              {label}
+              <span style={{ opacity: 0.55, marginLeft: 5 }}>({counts[key]})</span>
+            </button>
+          ))}
+        </div>
 
         {loading ? (
           <div style={{ padding: '60px 0', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-soft)', letterSpacing: '0.1em' }}>

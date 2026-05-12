@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getSupabase } from '@/lib/supabase'
+import PageHeader from '@/components/PageHeader'
 
 type ProfileRow = { profile: string; updated_at: string }
 type FeedbackRow = { rating: number; news_items: { category: string | null; source: string | null } | null }
@@ -100,25 +101,8 @@ export default function VoorkeurenPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--ink)' }}>
+      <PageHeader title="voorkeuren" />
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 28px 80px', position: 'relative', zIndex: 1 }}>
-
-        {/* Header */}
-        <header style={{ borderBottom: '1px solid var(--rule)', paddingBottom: 18, marginBottom: 22 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 10, fontFamily: 'var(--title)', fontSize: 32, letterSpacing: '-0.015em', lineHeight: 1.1 }}>
-              <span style={{ color: 'var(--accent)', fontSize: 20 }}>◆</span>
-              voorkeuren
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <nav className="masthead__nav desktop-nav">
-                <a href="/" className="masthead__nav-link">feed</a>
-                <a href="/opgeslagen" className="masthead__nav-link">opgeslagen</a>
-                <a href="/voorkeuren" className="masthead__nav-link masthead__nav-link--active">voorkeuren</a>
-                <a href="/bronnen" className="masthead__nav-link">bronnen</a>
-              </nav>
-            </div>
-          </div>
-        </header>
 
         {loading ? (
           <div style={{ padding: '60px 0', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-soft)', letterSpacing: '0.1em' }}>laden…</div>
