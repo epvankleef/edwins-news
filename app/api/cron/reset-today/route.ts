@@ -5,7 +5,8 @@ export const dynamic = 'force-dynamic'
 
 export async function DELETE(req: NextRequest) {
   const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  const expected = process.env.CRON_SECRET ?? process.env.NEXT_PUBLIC_CRON_SECRET
+  if (!expected || auth !== `Bearer ${expected}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

@@ -213,7 +213,8 @@ async function scoreWithOpenAI(openai: OpenAI, articles: Article[], profile: str
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  const expected = process.env.CRON_SECRET ?? process.env.NEXT_PUBLIC_CRON_SECRET
+  if (!expected || auth !== `Bearer ${expected}`) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
   }
 
