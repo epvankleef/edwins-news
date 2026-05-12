@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { getSupabase } from '@/lib/supabase'
-import NavMenu from '@/components/NavMenu'
 
 type Source = {
   id: number
@@ -273,7 +272,6 @@ export default function BronnenPage() {
                   <a href="/voorkeuren" className="masthead__nav-link">voorkeuren</a>
                   <a href="/bronnen" className="masthead__nav-link masthead__nav-link--active">bronnen</a>
                 </nav>
-                <NavMenu current="/bronnen" />
               </div>
             </div>
           </header>
@@ -335,7 +333,6 @@ export default function BronnenPage() {
                 <a href="/voorkeuren" className="masthead__nav-link">voorkeuren</a>
                 <a href="/bronnen" className="masthead__nav-link masthead__nav-link--active">bronnen</a>
               </nav>
-              <NavMenu current="/bronnen" />
             </div>
           </div>
         </header>

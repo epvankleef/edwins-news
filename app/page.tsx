@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { getSupabase, type NewsItem, type FeedbackRating } from '@/lib/supabase'
-import NavMenu from '@/components/NavMenu'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type Layout = 'list' | 'briefing' | 'clusters' | 'gallery' | 'stream'
@@ -775,7 +774,6 @@ export default function HomePage() {
             ) : fetchMsg ? (
               <span className="masthead__msg">{fetchMsg}</span>
             ) : null}
-            <NavMenu current="/" />
           </div>
         </div>
 

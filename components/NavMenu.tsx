@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 
 const LINKS = [
   { href: '/',            label: '◆ feed' },
@@ -16,7 +17,8 @@ const THEME_COLOR: Record<Theme, string> = {
   linen: '#F5F0E8', bone: '#FAFAF8',
 }
 
-export default function NavMenu({ current }: { current: '/' | '/opgeslagen' | '/voorkeuren' | '/bronnen' }) {
+export default function NavMenu() {
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [theme, setTheme] = useState<Theme>('porcelain')
 
@@ -56,7 +58,7 @@ export default function NavMenu({ current }: { current: '/' | '/opgeslagen' | '/
             <a
               key={href}
               href={href}
-              className={`nav-drawer__link${href === current ? ' nav-drawer__link--active' : ''}`}
+              className={`nav-drawer__link${pathname === href ? ' nav-drawer__link--active' : ''}`}
             >
               {label}
             </a>

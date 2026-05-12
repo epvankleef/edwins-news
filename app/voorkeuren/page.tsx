@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { getSupabase } from '@/lib/supabase'
-import NavMenu from '@/components/NavMenu'
 
 type ProfileRow = { profile: string; updated_at: string }
 type FeedbackRow = { rating: number; news_items: { category: string | null; source: string | null } | null }
@@ -117,7 +116,6 @@ export default function VoorkeurenPage() {
                 <a href="/voorkeuren" className="masthead__nav-link masthead__nav-link--active">voorkeuren</a>
                 <a href="/bronnen" className="masthead__nav-link">bronnen</a>
               </nav>
-              <NavMenu current="/voorkeuren" />
             </div>
           </div>
         </header>

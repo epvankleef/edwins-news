@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { getSupabase, type NewsItem } from '@/lib/supabase'
-import NavMenu from '@/components/NavMenu'
 
 type Tab = 'alles' | 'interessant' | 'mwah' | 'nope'
 
@@ -94,7 +93,6 @@ export default function OpgeslagenPage() {
                 <a href="/voorkeuren" className="masthead__nav-link">voorkeuren</a>
                 <a href="/bronnen" className="masthead__nav-link">bronnen</a>
               </nav>
-              <NavMenu current="/opgeslagen" />
             </div>
           </div>
 
