@@ -13,6 +13,7 @@ export default function PageHeader({ title, right }: { title: string; right?: Re
   const pathname = usePathname()
   return (
     <header className="masthead">
+      <div className="masthead__inner">
       <div className="masthead__top">
         <div className="masthead__brand">
           <div className="masthead__brand-row">
@@ -34,6 +35,7 @@ export default function PageHeader({ title, right }: { title: string; right?: Re
         <div className="masthead__controls">
           {right}
         </div>
+      </div>
       </div>
     </header>
   )
