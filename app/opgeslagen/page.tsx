@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { getSupabase, type NewsItem } from '@/lib/supabase'
 import PageHeader from '@/components/PageHeader'
+import Loader from '@/components/Loader'
 
 type Tab = 'alles' | 'interessant' | 'mwah' | 'nope'
 
@@ -97,9 +98,7 @@ export default function OpgeslagenPage() {
         </div>
 
         {loading ? (
-          <div style={{ padding: '60px 0', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-soft)', letterSpacing: '0.1em' }}>
-            laden…
-          </div>
+          <Loader />
         ) : filtered.length === 0 ? (
           <div style={{ padding: '60px 0', textAlign: 'center' }}>
             <p style={{ fontFamily: 'var(--serif)', fontSize: 18, color: 'var(--ink-dim)', fontStyle: 'italic' }}>

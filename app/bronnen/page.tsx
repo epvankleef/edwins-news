@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import PageHeader from '@/components/PageHeader'
+import Loader from '@/components/Loader'
 
 type Source = {
   id: number
@@ -305,7 +306,7 @@ export default function BronnenPage() {
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 28px 80px', position: 'relative', zIndex: 1 }}>
 
         {loading ? (
-          <div style={{ padding: '60px 0', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-soft)', letterSpacing: '0.1em' }}>laden…</div>
+          <Loader />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {grouped.map(({ cat, items }) => (

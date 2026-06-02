@@ -204,20 +204,20 @@ function ListLayout({
         <span style={{ color: 'var(--ink-soft)', opacity: 0.55, fontSize: 11 }}>jk · ↵ · 1–3</span>
       </div>
       <div className="atelier__colheads">
-        <span style={{ width: 28 }} />
-        <button className="colhead" style={{ width: 68 }} onClick={() => handleSort('score')}>
+        <span className="lc-arrow" />
+        <button className="colhead lc-score" onClick={() => handleSort('score')}>
           Score{arrow('score')}
         </button>
-        <button className="colhead" style={{ width: 190 }} onClick={() => handleSort('source')}>
+        <button className="colhead lc-src" onClick={() => handleSort('source')}>
           Bron{arrow('source')}
         </button>
-        <button className="colhead" style={{ width: 120 }} onClick={() => handleSort('time')}>
+        <button className="colhead lc-time" onClick={() => handleSort('time')}>
           Tijd{arrow('time')}
         </button>
-        <button className="colhead" style={{ flex: 1 }} onClick={() => handleSort('title')}>
+        <button className="colhead lc-title" onClick={() => handleSort('title')}>
           Titel{arrow('title')}
         </button>
-        <button className="colhead" style={{ width: 180, textAlign: 'right' }} onClick={() => handleSort('reaction')}>
+        <button className="colhead lc-rx" onClick={() => handleSort('reaction')}>
           Reactie{arrow('reaction')}
         </button>
       </div>
@@ -244,19 +244,20 @@ function ListLayout({
                 className="arow__main"
                 onClick={() => onRowClick(idx, it.id)}
               >
-                <span className="arow__arrow" style={{ width: 28 }}>{arrowMark}</span>
-                <span className="score-pill" style={{ width: 68, color: scoreColor(it.score) }}>
+                <span className="arow__arrow lc-arrow">{arrowMark}</span>
+                <span className="score-pill lc-score" style={{ color: scoreColor(it.score) }}>
                   {it.score}<span className="slash">/10</span>
                 </span>
-                <span style={{ width: 190, display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--ink-dim)', fontFamily: 'var(--mono)', fontSize: 12 }}>
+                <span className="lc-src" style={{ color: 'var(--ink-dim)', fontFamily: 'var(--mono)', fontSize: 12 }}>
                   <SrcDot source={it.source} />{it.source}
                 </span>
-                <span style={{ width: 120, color: 'var(--ink-soft)', fontFamily: 'var(--mono)', fontSize: 12 }}>{it.time}</span>
-                <span className="arow__title" style={{ flex: 1 }}>
+                <span className="lc-time" style={{ color: 'var(--ink-soft)', fontFamily: 'var(--mono)', fontSize: 12 }}>{it.time}</span>
+                <span className="arow__title lc-title">
                   {it.title}
                   {it.hot && <HotFlag />}
+                  <span className="arow__meta"><SrcDot source={it.source} />{it.source} · {it.time}</span>
                 </span>
-                <span style={{ width: 180, textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 12 }}>{rxDisplay}</span>
+                <span className="lc-rx" style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>{rxDisplay}</span>
               </div>
               {isE && (
                 <div className="arow__expand">
@@ -789,7 +790,7 @@ export default function HomePage() {
                 {mode === 'all' ? 'Alles' : mode === 'hot' ? 'Hot' : mode === 'high' ? '8+' : 'NL'}
               </button>
             ))}
-            <div style={{ flex: 1 }} />
+            <div className="filterrow__spacer" style={{ flex: 1 }} />
             <button
               className="chip filterrow__fetch"
               onClick={triggerFetch}
