@@ -725,8 +725,9 @@ export default function HomePage() {
   const todayStr = today.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
   return (
-    <div className="app">
+    <>
       <header className="masthead">
+        <div className="masthead__inner">
         <div className="masthead__top">
           {/* Links: brand + datum */}
           <div className="masthead__brand">
@@ -827,8 +828,10 @@ export default function HomePage() {
             </div>
           )}
         </div>
+        </div>
       </header>
 
+      <div className="app">
       <div id="feed">
         {loading ? (
           <Loader />
@@ -855,6 +858,7 @@ export default function HomePage() {
           <StreamLayout items={filtered} reactions={reactions} onReact={handleReact} />
         )}
       </div>
-    </div>
+      </div>
+    </>
   )
 }
