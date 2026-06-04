@@ -542,6 +542,7 @@ export default function HomePage() {
   const [reactions, setReactions] = useState<Record<string, ReactKey>>({})
 
   const searchRef = useRef<HTMLInputElement>(null)
+  const profileTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Load persisted prefs (reactions komen via loadArticles vanuit Supabase)
   useEffect(() => {
@@ -645,6 +646,14 @@ export default function HomePage() {
       news_item_id: id,
       rating,
     }, { onConflict: 'news_item_id' })
+
+    // Profiel automatisch bijwerken zodra er genoeg nieuwe beoordelingen zijn.
+    // Gedebounced: pas 5s na de laatste reactie, zodat een ratingsessie als één
+    // check telt. De endpoint slaat zelf over als de drempel (10) niet gehaald is.
+    if (profileTimer.current) clearTimeout(profileTimer.current)
+    profileTimer.current = setTimeout(() => {
+      fetch('/api/profile-update', { method: 'POST' }).catch(() => {})
+    }, 5000)
   }, [])
 
   // Row click (list layout)
