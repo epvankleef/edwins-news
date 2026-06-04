@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { getSupabase, type NewsItem, type FeedbackRating } from '@/lib/supabase'
+import LogoutButton from '@/components/LogoutButton'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type Layout = 'list' | 'briefing' | 'clusters' | 'gallery' | 'stream'
@@ -642,10 +643,13 @@ export default function HomePage() {
       return next
     })
     const rating = RATING_MAP[key]
+    const { data: { user } } = await getSupabase().auth.getUser()
+    if (!user) return
     await getSupabase().from('user_feedback').upsert({
       news_item_id: id,
       rating,
-    }, { onConflict: 'news_item_id' })
+      user_id: user.id,
+    }, { onConflict: 'user_id,news_item_id' })
 
     // Profiel automatisch bijwerken zodra er genoeg nieuwe beoordelingen zijn.
     // Gedebounced: pas 5s na de laatste reactie, zodat een ratingsessie als één
@@ -693,9 +697,7 @@ export default function HomePage() {
     setFetching(true)
     setFetchMsg('Ophalen…')
     try {
-      const resp = await fetch('/api/cron/news', {
-        headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET}` },
-      })
+      const resp = await fetch('/api/cron/news')
       const reader = resp.body?.getReader()
       const dec = new TextDecoder()
       if (!reader) { setFetchMsg('Geen stream'); setFetching(false); return }
@@ -723,10 +725,7 @@ export default function HomePage() {
 
   async function resetToday() {
     if (!confirm('Alle artikelen van vandaag wissen?')) return
-    await fetch('/api/cron/reset-today', {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET}` },
-    })
+    await fetch('/api/cron/reset-today', { method: 'DELETE' })
     setItems([])
   }
 
@@ -785,6 +784,7 @@ export default function HomePage() {
             ) : fetchMsg ? (
               <span className="masthead__msg">{fetchMsg}</span>
             ) : null}
+            <LogoutButton />
           </div>
         </div>
 

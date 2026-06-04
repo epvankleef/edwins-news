@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import LogoutButton from '@/components/LogoutButton'
 
 const LINKS = [
   { href: '/',            label: '◆ feed' },
@@ -35,6 +36,9 @@ export default function NavMenu() {
     localStorage.setItem('ef:theme', t)
     document.body.setAttribute('data-theme', t)
   }
+
+  // Geen navigatie/uitloggen op de loginpagina
+  if (pathname === '/login') return null
 
   return (
     <>
@@ -76,6 +80,11 @@ export default function NavMenu() {
               onClick={() => applyTheme(t)}
             />
           ))}
+        </div>
+
+        <div className="nav-drawer__section-label">Account</div>
+        <div style={{ padding: '4px 0' }}>
+          <LogoutButton />
         </div>
       </div>
     </>

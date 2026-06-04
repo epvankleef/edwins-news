@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getServerSupabase } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
 export async function DELETE(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  const expected = process.env.CRON_SECRET ?? process.env.NEXT_PUBLIC_CRON_SECRET
-  if (!expected || auth !== `Bearer ${expected}`) {
+  const cronSecret = process.env.CRON_SECRET
+  const hasCronSecret = !!cronSecret && req.headers.get('authorization') === `Bearer ${cronSecret}`
+  let isLoggedIn = false
+  if (!hasCronSecret) {
+    const sb = await getServerSupabase()
+    const { data: { user } } = await sb.auth.getUser()
+    isLoggedIn = !!user
+  }
+  if (!hasCronSecret && !isLoggedIn) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

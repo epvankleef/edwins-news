@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import OpenAI from 'openai'
+import { getServerSupabase } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -212,9 +213,16 @@ async function scoreWithOpenAI(openai: OpenAI, articles: Article[], profile: str
 }
 
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  const expected = process.env.CRON_SECRET ?? process.env.NEXT_PUBLIC_CRON_SECRET
-  if (!expected || auth !== `Bearer ${expected}`) {
+  // Toegang: een ingelogde gebruiker (browser-sessie) OF de CRON_SECRET (Vercel-cron).
+  const cronSecret = process.env.CRON_SECRET
+  const hasCronSecret = !!cronSecret && req.headers.get('authorization') === `Bearer ${cronSecret}`
+  let isLoggedIn = false
+  if (!hasCronSecret) {
+    const auth = await getServerSupabase()
+    const { data: { user } } = await auth.auth.getUser()
+    isLoggedIn = !!user
+  }
+  if (!hasCronSecret && !isLoggedIn) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
   }
 

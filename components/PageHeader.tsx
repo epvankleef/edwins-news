@@ -1,6 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
+import LogoutButton from '@/components/LogoutButton'
 
 const NAV_LINKS = [
   { href: '/',           label: 'feed' },
@@ -34,6 +35,7 @@ export default function PageHeader({ title, right }: { title: string; right?: Re
         </nav>
         <div className="masthead__controls">
           {right}
+          <LogoutButton />
         </div>
       </div>
       </div>
