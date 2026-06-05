@@ -286,7 +286,7 @@ export async function GET(req: NextRequest) {
         const fresh = deduped.filter((a) => !existingUrls.has(a.url) && isAIRelated(a))
 
         if (fresh.length === 0) {
-          send({ type: 'done', inserted: 0, total: deduped.length, skipped: existingUrls.size })
+          send({ type: 'done', inserted: 0, fetched: allArticles.length, alreadySaved: existingUrls.size })
           return
         }
 
@@ -330,7 +330,7 @@ export async function GET(req: NextRequest) {
           const cutoff60 = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
           await supabase.from('user_feedback').delete().lt('created_at', cutoff60)
           await supabase.from('news_items').delete().lt('created_at', cutoff60)
-          send({ type: 'done', inserted: top.length, total: deduped.length })
+          send({ type: 'done', inserted: top.length, fetched: allArticles.length, alreadySaved: existingUrls.size })
         }
       } catch (err) {
         const msg = err instanceof Error ? `${err.message} | ${err.cause}` : String(err)

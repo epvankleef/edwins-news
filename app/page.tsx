@@ -721,7 +721,13 @@ export default function HomePage() {
           try {
             const evt = JSON.parse(line.slice(5))
             if (evt.type === 'status') setFetchMsg(evt.message)
-            if (evt.type === 'done') setFetchMsg(`✓ ${evt.inserted} nieuw opgeslagen`)
+            if (evt.type === 'done') {
+              const parts = [`✓ ${evt.inserted} nieuw`]
+              if (typeof evt.fetched === 'number') {
+                parts.push(`${evt.alreadySaved ?? 0} stonden er al`, `${evt.fetched} opgehaald`)
+              }
+              setFetchMsg(parts.join(' · '))
+            }
             if (evt.type === 'error') setFetchMsg(`✗ ${evt.message}`)
           } catch {}
         }
