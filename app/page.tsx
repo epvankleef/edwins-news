@@ -566,26 +566,37 @@ export default function HomePage() {
     setLoading(true)
     try {
       const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+      const supabase = getSupabase()
 
-      const [{ data: newsData }, { data: fbData }] = await Promise.all([
-        getSupabase()
-          .from('news_items')
-          .select('*')
-          .gte('created_at', cutoff)
-          .order('score', { ascending: false })
-          .limit(10),
-        getSupabase()
-          .from('user_feedback')
-          .select('news_item_id, rating'),
-      ])
+      // 1. Beoordelingen eerst — die bepalen welke artikelen verborgen worden.
+      const { data: fbData } = await supabase
+        .from('user_feedback')
+        .select('news_item_id, rating')
 
       const REVERSE: Record<number, ReactKey> = { 3: 'interessant', 2: 'mwah', 1: 'nope' }
       const stored = (() => { try { return JSON.parse(localStorage.getItem('ef:reactions') ?? '{}') } catch { return {} } })()
       const allReactions: Record<string, ReactKey> = { ...stored }
+      const ratedIds: string[] = []
       for (const fb of (fbData ?? [])) {
+        const id = fb.news_item_id ? String(fb.news_item_id) : ''
         const key = REVERSE[fb.rating as number]
-        if (key) allReactions[String(fb.news_item_id)] = key
+        if (id) ratedIds.push(id)
+        if (id && key) allReactions[id] = key
       }
+
+      // 2. Haal de hoogst gescoorde NOG NIET beoordeelde artikelen op.
+      //    Beoordeelde items worden server-side uitgesloten *vóór* de limit,
+      //    zodat de feed niet leegloopt zodra je de topscores hebt beoordeeld.
+      let query = supabase
+        .from('news_items')
+        .select('*')
+        .gte('created_at', cutoff)
+        .order('score', { ascending: false })
+        .limit(10)
+      if (ratedIds.length > 0) {
+        query = query.not('id', 'in', `(${ratedIds.join(',')})`)
+      }
+      const { data: newsData } = await query
 
       const groups = new Map<string, ReturnType<typeof toFeedItem>[]>()
       for (const raw of (newsData ?? [])) {
